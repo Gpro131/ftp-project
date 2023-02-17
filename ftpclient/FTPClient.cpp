@@ -5,39 +5,52 @@ void FTPClient::Login(string addr, string usr, string pwd)
 {
 	//连接
 	cmdClient.Init(addr, 21);
+	cmdClient.StartReceiveThread();
 
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	//memset(recvBuff, 0, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
 
+	APICell cell[2];
+	Enque("loginuser", cell);
 	//登录用户
 	memset(sendBuff, 0, SendSize);
 	sprintf(sendBuff, "USER %s\r\n", usr.data());
 	cmdClient.Send(sendBuff, strlen(sendBuff));
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	//memset(recvBuff, 0, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
+	cell[0].WaitResult();
+
+
 	//密码
+	Enque("loginpass", cell + 1);
 	memset(sendBuff, 0, SendSize);
 	sprintf(sendBuff, "PASS %s\r\n", pwd.data());
 	cmdClient.Send(sendBuff, strlen(sendBuff));
 	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
+	cell[1].WaitResult();
+
 }
 
 void FTPClient::Pasv()
 {
 	if (dataServer.GetIsRunning())
 	{
-		dataClient.Close();
+		dataServer.Close();
 	}
+	APICell cell;
+	Enque("Pasv", &cell);
+
 	//开启被动模式后，需要
 	memset(sendBuff, 0, SendSize);
 	sprintf(sendBuff, "PASV\r\n");
 	cmdClient.Send(sendBuff, strlen(sendBuff));
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
-
+	//memset(recvBuff, 0, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
+	cell.WaitResult();
 
 	string str(recvBuff);
+	if (str.size() == 0) return;
 	size_t posS = str.find_first_of("(");
 	size_t posE = str.find_first_of(")");
 	str = str.substr(posS + 1, posE - posS - 1);
@@ -63,14 +76,18 @@ void FTPClient::Pasv()
 
 std::string FTPClient::List()
 {
+	APICell cell;
+	Enque("List", &cell);
 	memset(sendBuff, 0, SendSize);
 	sprintf(sendBuff, "LIST\r\n");
 	cmdClient.Send(sendBuff, strlen(sendBuff));
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
-	::Sleep(500);
+	//memset(recvBuff, 0, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
+	cell.WaitResult();
+	cout <<"ListCellContent" << cell.content << endl;
 	ParseListAck(dataServer.recvBuff, RecvSize);
 	std::string resStr = dataServer.recvBuff;
+	cout << resStr << endl;
 	return resStr;
 }
 
@@ -80,15 +97,18 @@ void FTPClient::Port()
 	{
 		dataClient.Close();
 	}
+	APICell cell;
+	Enque("Port", &cell);
 	int port = 22020;
 	dataServer.Init(22020);
 	dataServer.StartReceiveThread(false);
 	//dataServer.StartAcceptThread(false);
 	memset(sendBuff, 0, SendSize);
-	sprintf(sendBuff, "%s\r\n", GetPortCmd(port).data());
+	sprintf(sendBuff, "%s", GetPortCmd(port).data());
 	cmdClient.Send(sendBuff, strlen(sendBuff));
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	cell.WaitResult();
+	/*memset(recvBuff, 0, RecvSize);
+	cmdClient.Receive(recvBuff, RecvSize);*/
 }
 
 void FTPClient::Exit()
@@ -96,8 +116,8 @@ void FTPClient::Exit()
 	memset(sendBuff, 0, SendSize);
 	sprintf(sendBuff, "QUIT\r\n");
 	cmdClient.Send(sendBuff, strlen(sendBuff));
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	//memset(recvBuff, 0, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
 	if (cmdClient.GetIsRunning()) cmdClient.Close();
 	if (dataClient.GetIsRunning()) dataClient.Close();
 	if (dataServer.GetIsRunning()) dataServer.Close();
@@ -109,14 +129,14 @@ std::string FTPClient::Pwd()
 	memset(sendBuff, 0, SendSize);
 	sprintf(sendBuff, "PWD\r\n");
 	cmdClient.Send(sendBuff, strlen(sendBuff));
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	//memset(recvBuff, 0, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
 	//std::string recvStr = cmdClient.Receive();
 	//257 "/" is current directory.
 	std::string resultDir = recvBuff;
 	int nPos = resultDir.find('"');
 	int nLastPos = resultDir.rfind('"');
-	std::string dir = SubString(resultDir,'"','"');
+	std::string dir = SubString(resultDir, '"', '"');
 	return	dir;
 }
 void FTPClient::Cwd(std::string workDir)
@@ -124,8 +144,8 @@ void FTPClient::Cwd(std::string workDir)
 	memset(sendBuff, 0, SendSize);
 	sprintf(sendBuff, "CWD %s\r\n", workDir.data());
 	cmdClient.Send(sendBuff, strlen(sendBuff));
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	//memset(recvBuff, 0, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
 }
 
 
@@ -135,7 +155,7 @@ void FTPClient::MakeDiectory()
 	sprintf(sendBuff, "MKD abc\r\n");
 	cmdClient.Send(sendBuff, strlen(sendBuff));
 	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
 }
 
 void FTPClient::Retr(string serverFile, string dstFile)
@@ -147,14 +167,14 @@ void FTPClient::Retr(string serverFile, string dstFile)
 	sprintf(sendBuff, "RETR %s\r\n", serverFile.data());
 	cmdClient.Send(sendBuff, strlen(sendBuff));
 	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
 
 	memset(sendBuff, 0, SendSize);
 	//sprintf(sendBuff, "TYPE BINARY\r\n");
 	sprintf(sendBuff, "TYPE I\r\n");
-	cmdClient.Send(sendBuff, SendSize); //这个命令刚发出 datachannel收到了文件内容
+	//cmdClient.Send(sendBuff, SendSize); //这个命令刚发出 datachannel收到了文件内容
 	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	/*cmdClient.Receive(recvBuff, RecvSize);*/
 	//memset(recvBuff, 0, RecvSize);
 	//int nRetSize = recv(dataServer.s[0], recvBuff, RecvSize, 0);
 	//dataServer.Receive(recvBuff, RecvSize);
@@ -163,28 +183,30 @@ void FTPClient::Retr(string serverFile, string dstFile)
 
 }
 
-void FTPClient::Stor(string fileName)
+void FTPClient::Stor(string fileName,string serverFileName)
 {
 	//需要服务器处于被动模式
-
+	APICell cell[2];
+	Enque("Stor", cell);
 
 	//上传文件 需要服务器处于被动模式
 	memset(sendBuff, 0, SendSize);
-	sprintf(sendBuff, "STOR %s\r\n", "1.txt");
+	sprintf(sendBuff, "STOR %s\r\n", serverFileName.data());
 	//sprintf(sendBuff, "GET  %s\r\n", "1.txt");
 	cmdClient.Send(sendBuff, strlen(sendBuff));
-
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	cell[0].WaitResult();
+	//memset(recvBuff, 0, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
 	//cout << "Stor Recv:" << recvBuff << endl;
-
+	Enque("Type", cell+1);
 	//需要自己向服务器上传文件
 	memset(sendBuff, 0, SendSize);
 	//sprintf(sendBuff, "TYPE BINARY\r\n");	//这一行报错
 	sprintf(sendBuff, "TYPE I\r\n");
 	cmdClient.Send(sendBuff, SendSize);
-	memset(recvBuff, 0, RecvSize);
-	cmdClient.Receive(recvBuff, RecvSize);
+	cell[1].WaitResult();
+	//memset(recvBuff, 0, RecvSize);
+	//cmdClient.Receive(recvBuff, RecvSize);
 	//cout << "Stor Recv:" << recvBuff << endl;
 	ifstream ifs;
 	ifs.open(fileName.data(), std::ios::in | std::ios::binary);
@@ -260,12 +282,47 @@ void FTPClient::ParseListAck(char* buff, int size)
 bool FTPClient::ParseRecvInfo(std::string content, std::string& recvContent)
 //std::string FTPClient::ParseRecvInfo(std::string content)
 {
-	size_t firstspacepos =content.find_first_of(' ');
-	int msgcode = atoi(content.substr(0, firstspacepos).data());
-	if (msgcode == 200 || msgcode == 212 ||msgcode ==213)
+	size_t firstspacepos = content.find_first_of(' ');
+	std::string strMsgCode = content.substr(0, firstspacepos);
+	if (strMsgCode.empty()) return false;
+	int msgcode = atoi(strMsgCode.data());
+	cout << "[msgcode]" << msgcode << endl;
+	recvContent = content.substr(firstspacepos, content.size());
+	/*if (msgcode == 200 || msgcode == 220 || msgcode == 230 || msgcode == 212 || msgcode == 213)
 	{
-		recvContent = content.substr(firstspacepos, content.size());
+		
 		return true;
+	}*/
+	return true;
+}
+void FTPClient::Enque(std::string type, APICell* cell)
+{
+	cell->callType = type;
+	cell->getResult = false;
+	cell->content = "";
+	callDeque.push_back(cell);
+}
+void FTPClient::OnCmdClientRecv(SOCKET s, char* buff, int size)
+{
+	cout << "[recv]:" << buff << endl;
+	stringstream ss(buff);
+	char line[10480];
+	string linestr;
+	while (!ss.eof())
+	{
+		string recv;
+		ss.getline(line, 10480);
+		linestr = line;
+		if (!linestr.empty() && ParseRecvInfo(linestr, recv))
+		{
+			if (callDeque.size() > 0)
+			{
+				callDeque.front()->content = recv;
+				callDeque.front()->Notify();
+				callDeque.pop_front();
+			}
+		}
 	}
-	return false;
+
+	//	cout << "[recv]----------------" << endl;
 }

@@ -307,13 +307,59 @@ int main()
 	//ifs.close();
 	FTPClient f;
 	f.Login("127.0.0.1", "root", "1234");
-	cout << "服务器被动模式" << endl;
+
+	string line;
+	char lineBuff[2048];
+	//std::stringstream ss;
+	ss.clear();
+	ss.seekg(0);
+	ss.str("");
+	string cmd, arg0, arg1, arg2;
+
+	while (line != "exit")
+	{
+		getline(cin, line);
+		ss.str(line);
+		ss >> cmd;
+		if (cmd == "Pasv")
+		{
+			f.Pasv();
+		}
+		if(cmd == "Port")
+		{
+			f.Port();
+		}
+		if (cmd == "Stor")
+		{
+			cout << "上传文件" << arg0;
+			ss >> arg0>>arg1;
+			f.Stor(arg0,arg1);
+		}
+		if (cmd == "List")
+		{
+			f.List();
+		}
+		if (cmd == "Retr")
+		{
+			cout << "下载文件：服务器文件：" << arg0 <<"客户端目标文件位置：" << arg1;
+			ss >> arg0 >> arg1;
+			f.Retr(arg0, arg1);
+		}
+		ss.str("");
+		ss.seekg(0);
+		ss.clear();
+	}
+
+
+
+
+	//cout << "服务器被动模式" << endl;
+	////f.Pasv();
+	////f.Stor("C:/1.ddd");
+	//cout << "服务器主动模式" << endl;
+	//::Sleep(1000);
+	//f.Port();
 	//f.Pasv();
-	//f.Stor("C:/1.ddd");
-	cout << "服务器主动模式" << endl;
-	::Sleep(1000);
-	f.Port();
-	f.Pasv();
 	
 	/*::Sleep(1000);
 	cout<<"pwd:"<<f.Pwd()<<endl;

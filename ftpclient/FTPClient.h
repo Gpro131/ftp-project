@@ -13,12 +13,41 @@ enum FileColumnAttrib {
 	LC_DATE_DAY = 6,
 	LC_FILENAME = 7
 };
+struct APICell
+{
+	string callType;
+	bool getResult;
+	string content;
+	std::mutex mtx;
+	std::unique_lock<std::mutex> locker;
+	std::condition_variable cv;
+	APICell()
+	{
+		getResult = false;
+		std::unique_lock<std::mutex> locker1(mtx);
+		locker.swap(locker1);
+	}
+
+	void WaitResult() {
+		//cv.wait_for(locker,std::chrono::duration_cast<std::chrono::seconds>(5));
+		cv.wait(locker);
+	}
+	void Notify()
+	{
+		cv.notify_one();
+	}
+};
+
 class FTPClient : public IFtpClient
 {
 public:
 	FTPClient() {
 		dataServer.RecvHandler = std::bind(&FTPClient::OnRecvDataChannel, this,
 			std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+
+		cmdClient.RecvHandler = std::bind(&FTPClient::OnCmdClientRecv, this,
+			std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+		
 	}
 	/**
 	 *
@@ -56,7 +85,7 @@ public:
 	/**
 	 * 上传文件 服务器处于被动模式
 	 */
-	virtual void Stor(string fileName);
+	virtual void Stor(string fileName,string destFileName);
 private:
 	char sendBuff[SendSize];
 	char recvBuff[RecvSize];
@@ -69,7 +98,7 @@ private:
 		// 13264 51 208
 		// 端口是 4 * 256 +2 = 1026
 		char buff[1024];
-		memset(buff,0,1024);
+		memset(buff, 0, 1024);
 		sprintf(buff, "PORT 127,0,0,1,%d,%d\r\n", p1, p2);
 		return buff;
 	}
@@ -81,7 +110,10 @@ private:
 	string curCmd;
 	string downFileName;
 	ofstream ofs;
+	void Enque(std::string type, APICell* cell);
+	bool ParseRecvInfo(std::string content, std::string& recvContnet);
+	std::deque<APICell*>  callDeque;
 
-	bool ParseRecvInfo(std::string content,std::string& recvContnet);
 
+	void OnCmdClientRecv(SOCKET s,char* buff,int size);
 };

@@ -47,7 +47,7 @@ void TcpServer::StartAcceptThread(bool isBlocked/*=false*/)
 
 void TcpServer::Send(char* buff, int size)
 {
-	if (s.size() > 0)
+	if (size > 0)
 	{ 
 		if (send(s[0], buff, size, 0) < 0)
 		{
@@ -84,6 +84,7 @@ void TcpServer::ReceiveThread()
 		clntSock = accept(serverSock, (struct sockaddr*)(&sa), &addrlen);
 		if (clntSock != INVALID_SOCKET || addrlen > 0)
 		{
+			cout << "server connect to client" << endl;
 			this->s.push_back(clntSock);
 			break;
 		}

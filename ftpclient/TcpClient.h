@@ -3,6 +3,7 @@
 class TcpClient
 {
 public:
+	~TcpClient() { isRunning = false; }
 	void Init(string addr, int port);
 	void StartReceiveThread();
 	void Send(char* buff, int size);
@@ -11,6 +12,7 @@ public:
 
 	void Close();
 
+	std::function<void(SOCKET, char*, int)> RecvHandler;
 
 	SOCKET serverSock;
 	SOCKET clientSock;

@@ -40,7 +40,7 @@ void TcpClient::Receive(char* buff, int size)
 		std::cout << "Failed to receive data!" << std::endl;
 	}
 	else {
-		cout <<"[recv]"<< buff << endl;
+		cout << "[recv]" << buff << endl;
 	}
 }
 string  TcpClient::ReceiveStr()
@@ -50,7 +50,7 @@ string  TcpClient::ReceiveStr()
 	char buff[20480];
 	while (ret > 0)
 	{
-		memset(buff,0,2048);
+		memset(buff, 0, 2048);
 		ret = recv(clientSock, buff, 20480, 0);
 		for (int i = 0;i < ret;i++)
 		{
@@ -66,11 +66,13 @@ void TcpClient::ReceiveThread()
 	isRunning = true;
 	while (isRunning)
 	{
+		memset(recvBuff, 0, RecvSize);
 		int ret = recv(clientSock, recvBuff, RecvSize, 0);
 		if (ret >= 0) {
-			cout << recvBuff << endl;
-			memset(recvBuff, 0, RecvSize);
+			//cout << "client thread:" << recvBuff << endl;
+			RecvHandler(clientSock, recvBuff, ret);
 		}
+		::Sleep(5);
 	}
 }
 
