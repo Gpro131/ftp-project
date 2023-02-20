@@ -3,6 +3,6 @@
 
 IFtpClient* GetFtpClient()
 {
-	static FTPClient ftpClient;
+	static FTPSocket::FTPClient ftpClient;
 	return &ftpClient;
 }

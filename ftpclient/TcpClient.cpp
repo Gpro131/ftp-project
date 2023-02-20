@@ -62,15 +62,21 @@ string  TcpClient::ReceiveStr()
 
 void TcpClient::ReceiveThread()
 {
-	char recvBuff[RecvSize];
+	char recvBuff[20480];
 	isRunning = true;
 	while (isRunning)
 	{
-		memset(recvBuff, 0, RecvSize);
-		int ret = recv(clientSock, recvBuff, RecvSize, 0);
-		if (ret >= 0) {
-			//cout << "client thread:" << recvBuff << endl;
-			RecvHandler(clientSock, recvBuff, ret);
+		memset(recvBuff, 0, 20480);
+		int ret = recv(clientSock, recvBuff, 20480, 0);
+		if (ret > 0) {
+			//cout << "client["<< clientSock <<"] thread:" << recvBuff << endl;
+			RecvHandler("msg",clientSock, recvBuff, ret);
+		}
+		else {
+			//cout << "disconnect" << endl;
+			RecvHandler("disconnect", clientSock, recvBuff, ret);
+			Close();
+			break;
 		}
 		::Sleep(5);
 	}

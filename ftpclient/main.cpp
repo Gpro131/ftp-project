@@ -218,7 +218,7 @@ int mainda()
 	tcpServerData.Init(1026);
 	char* recv;
 	int size;
-	tcpServerData.StartReceiveThread(false);
+	tcpServerData.StartRecvThread();
 
 	TcpClient tcpClientCmd;
 	tcpClientCmd.Init("127.0.0.1", 21);
@@ -275,7 +275,11 @@ int mainda()
 	WSACleanup();
 	return 0;
 }
-
+void GetIp()
+{
+	int ip[4];
+	GetIpData(ip, 4);
+}
 int main()
 {
 	GS g;
@@ -303,10 +307,17 @@ int main()
 			cout << ifs.gcount() << endl;
 		}
 	}*/
-
+	GetIp();
 	//ifs.close();
+	using namespace FTPSocket;
 	FTPClient f;
-	f.Login("127.0.0.1", "root", "1234");
+	std::wstring  wServerAddr = String2WString(GetLocalIP());
+	//std::wstring  wServerAddr = L"192.168.1.57"
+	f.Login(wServerAddr, L"root", L"1234");
+	//f.Login("192.168.1.66", "root", "1234");
+	//如果是127.0.0.1的话，主动模式需要报告客户端的ip
+	//如果是本机的局域网ip，主动需要报告客户端的局域网ip，配套即可
+	//f.Login(GetLocalIP(), "root", "1234");
 
 	string line;
 	char lineBuff[2048];
@@ -325,25 +336,37 @@ int main()
 		{
 			f.Pasv();
 		}
-		if(cmd == "Port")
+		if (cmd == "Port")
 		{
 			f.Port();
 		}
 		if (cmd == "Stor")
 		{
 			cout << "上传文件" << arg0;
-			ss >> arg0>>arg1;
-			f.Stor(arg0,arg1);
+			ss >> arg0 >> arg1;
+			f.Stor(String2WString(arg0),String2WString(arg1), 2048);
 		}
 		if (cmd == "List")
 		{
-			f.List();
+			f.Pasv();
+			std::vector<FileInfo> fi;
+			f.ListAllFileAndFolders(fi);
+			// cout<<"List"<<	f.List()<<endl;
+			
+			for (int i = 0; i < fi.size(); i++)
+			{
+				const wchar_t* filetype = fi[i].isFile ? L"file" : L"dir";
+				wcout << fi[i].author << L" " << fi[i].fileName << L" " << filetype << L" "<< fi[i].fileSize<< L" " << fi[i].authority<<endl;
+				//wprintf(L"%s %s %s %d ", fi[i].authority, fi[i].isFile ? "file" : "dir", fi[i].fileSize, fi[i].fileName);
+			}
+
 		}
 		if (cmd == "Retr")
 		{
-			cout << "下载文件：服务器文件：" << arg0 <<"客户端目标文件位置：" << arg1;
+			cout << "下载文件：服务器文件：" << arg0 << "客户端目标文件位置：" << arg1;
 			ss >> arg0 >> arg1;
-			f.Retr(arg0, arg1);
+			f.Retr(String2WString(arg0), 
+				String2WString(arg1), 2048);
 		}
 		ss.str("");
 		ss.seekg(0);
@@ -360,18 +383,18 @@ int main()
 	//::Sleep(1000);
 	//f.Port();
 	//f.Pasv();
-	
+
 	/*::Sleep(1000);
 	cout<<"pwd:"<<f.Pwd()<<endl;
 	f.Cwd("abc");
 	cout<<"pwd:"<<f.Pwd() << endl;*/
 	//f.MakeDiectory();
+	/*f.List();
 	f.List();
 	f.List();
-	f.List();
-	
+
 	::Sleep(1000);
-	f.Retr("1.log", "2.log");
+	f.Retr("1.log", "2.log");*/
 	//f.Stor(fileName);
 	//string line;
 	//cin >> line;

@@ -1,8 +1,21 @@
 #pragma once
 #include "BaseInc.h"
-namespace ftp
+namespace FTPSocket
 {
-	void Login(string usr, string pwd) {}
+	/*void Login(string usr, string pwd) {}
 	void List() {}
-	void Quit() {}
+	void Quit() {}*/
+	enum FtpCmd {
+		Pasv,
+		Port,
+		List,
+		Stor,
+		Retr,
+		Cwd,
+		Pwd,
+		MakeDir,
+		Exit
+	};
+	
+
 }
