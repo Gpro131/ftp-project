@@ -2,7 +2,7 @@
 #include "FTPClient.h"
 #include "tool.h"
 namespace FTPSocket {
-	void FTPClient::Login(std::wstring  wAddr, std::wstring  wUsr, std::wstring  wPwd)
+	void FTPClient::Login(const wchar_t* wAddr, const wchar_t* wUsr, const wchar_t* wPwd)
 	{
 		std::string addr = WString2String(wAddr);
 		std::string usr = WString2String(wUsr);
@@ -83,7 +83,7 @@ namespace FTPSocket {
 		//dataClient.name = "dataClient";
 	}
 
-	std::wstring FTPClient::List()
+	const wchar_t* FTPClient::List()
 	{
 		curFtpCmd = FTPSocket::List;
 		FSCommand cell;
@@ -132,7 +132,7 @@ namespace FTPSocket {
 		else {
 			dataServer.ClientOffline(dataServer.clientList.back());
 		}
-		return String2WString(resStr);
+		return String2WString(resStr).data();
 	}
 
 	void FTPClient::ListAllFileAndFolders(std::vector<FileInfo>& files)
@@ -232,7 +232,7 @@ namespace FTPSocket {
 
 	}
 
-	std::wstring FTPClient::Pwd()
+	const wchar_t* FTPClient::Pwd()
 	{
 		curFtpCmd = FTPSocket::Pwd;
 		memset(sendBuff, 0, SendSize);
@@ -246,20 +246,21 @@ namespace FTPSocket {
 		int nPos = resultDir.find('"');
 		int nLastPos = resultDir.rfind('"');
 		std::string dir = SubString(resultDir, '"', '"');
-		return String2WString(dir);
+		return String2WString(dir).data();
 	}
-	void FTPClient::Cwd(std::string workDir)
+	void FTPClient::Cwd(const wchar_t* workDir)
 	{
+		std::string sWorkDir = WString2String(workDir);
 		curFtpCmd = FTPSocket::Cwd;
 		memset(sendBuff, 0, SendSize);
-		sprintf(sendBuff, "CWD %s\r\n", workDir.data());
+		sprintf(sendBuff, "CWD %s\r\n", sWorkDir.data());
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
 	}
 
 
-	void FTPClient::MakeDiectory(std::wstring wDir)
+	void FTPClient::MakeDiectory(const wchar_t* wDir)
 	{
 		std::string dir = WString2String(wDir);
 
@@ -271,7 +272,7 @@ namespace FTPSocket {
 		//cmdClient.Receive(recvBuff, RecvSize);
 	}
 
-	void FTPClient::Retr(wstring wServerFile, wstring wDstFile, int fileSize, IFileTransferObserver* observer)
+	void FTPClient::Retr(const wchar_t* wServerFile, const wchar_t* wDstFile, int fileSize, IFileTransferObserver* observer)
 	{
 		int taskID = -1;
 		if (serverMode == PasvMode)
@@ -359,7 +360,7 @@ namespace FTPSocket {
 
 	}
 
-	void FTPClient::Stor(std::wstring wLocalFile, std::wstring wServerFileName, int fileSize, IFileTransferObserver* observer /*= nullptr*/)
+	void FTPClient::Stor(const wchar_t* wLocalFile, const wchar_t* wServerFileName, int fileSize, IFileTransferObserver* observer /*= nullptr*/)
 	{
 		int taskID = -1;
 		if (serverMode == PasvMode)
@@ -457,10 +458,10 @@ namespace FTPSocket {
 					memset(buff, 0, 1024);
 					ifs.read(buff, 1024);
 					dataServer.Send(buff, readSize);
-					observer->UploadFileProgressCallBack(taskID, uploadFileSize / fileSize, wLocalFile.data());
+					observer->UploadFileProgressCallBack(taskID, uploadFileSize / fileSize, wLocalFile);
 				}
 				ifs.close();
-				observer->UploadFinishCallBack(taskID, wLocalFile.data());
+				observer->UploadFinishCallBack(taskID, wLocalFile);
 			}
 			else {
 				ifs.close();
@@ -593,6 +594,7 @@ namespace FTPSocket {
 
 	void FTPClient::GetFileListFromContent(const string& content, vector<FileInfo>& vctFileList)
 	{
+		vector<FileInfo> vFileList;
 		cout << content << endl;
 		vector<map<int, string>> fileList;
 		stringstream  ss(content);
@@ -610,8 +612,9 @@ namespace FTPSocket {
 			fi.isFile = fileInfo.isFile;
 			chars2wchars(fileInfo.author, fi.author, 255);
 			chars2wchars(fileInfo.authority, fi.authority, 10);
-			vctFileList.push_back(fi);
+			vFileList.push_back(fi);
 		}
+		vctFileList.assign(vFileList.begin(), vFileList.end());
 	}
 
 

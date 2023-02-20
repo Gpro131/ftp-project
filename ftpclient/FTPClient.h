@@ -157,9 +157,9 @@ namespace FTPSocket
 
 	struct TransFileInfo
 	{
-		std::string fileName{""};
-		int fileSize{0};
-		int curTransFileSize{0};
+		std::string fileName{ "" };
+		int fileSize{ 0 };
+		int curTransFileSize{ 0 };
 	};
 
 	enum ServerMode
@@ -186,7 +186,7 @@ namespace FTPSocket
 		/**
 		 * 登陆
 		 */
-		virtual void Login(std::wstring addr, std::wstring  usr, std::wstring  pwd);
+		virtual void Login(const wchar_t* addr, const wchar_t* usr, const wchar_t* pwd);
 		/**
 		 *服务器的被动模式，下载和上传文件需要被动模式 需要dataclient手动连接
 		 */
@@ -194,9 +194,37 @@ namespace FTPSocket
 		/**
 		 *列出文件列表 包括文件夹和文件 被动模式
 		 */
-		virtual std::wstring List(); //列出文件列表 包括文件夹和文件
+		virtual const wchar_t* List(); //列出文件列表 包括文件夹和文件
 
 		virtual void ListAllFileAndFolders(std::vector<FileInfo>& files);
+
+
+		virtual int ListAllFileAndFolders() {
+			if (listfileResult.size() > 0)
+			{
+				listfileResult.clear();
+				listfileResult.shrink_to_fit();
+			}
+			ListAllFileAndFolders(listfileResult);
+
+
+			return listfileResult.size();
+		} //列出文件列表 包括文件夹和文件 返回文件数量
+		virtual bool GetFileInfo(FileInfo& fi, int idx) {
+			if (idx >= 0 && idx < listfileResult.size())
+			{
+				memcpy(&fi, &listfileResult[idx], sizeof(FileInfo));
+				return true;
+			}
+			return false;
+		} //获取需要列举的文件列表
+		virtual void ClearFileList() {
+			listfileResult.clear();
+			listfileResult.shrink_to_fit();
+		} //获取需要列举的文件列表
+
+
+
 		/**
 		 * 主动模式
 		 */
@@ -205,29 +233,29 @@ namespace FTPSocket
 		/**
 		 * 打印当前目录
 		 */
-		virtual std::wstring  Pwd();
+		virtual	const wchar_t* Pwd();
 		/**
 		 * 改变服务器的工作目录
 		 */
-		virtual void Cwd(std::string workDir);
+		virtual void Cwd(const wchar_t* workDir);
 		/**
 		 * 创建目录
 		 */
-		virtual void MakeDiectory(std::wstring dir);
+		virtual void MakeDiectory(const wchar_t* dir);
 		/**
 		 * 下载文件,服务器处于被动模式
 		 */
-		virtual void Retr(wstring serverFile, wstring dstFile, int fileSize, IFileTransferObserver* observer = nullptr);
+		virtual void Retr(const wchar_t* serverFile, const wchar_t* dstFile, int fileSize, IFileTransferObserver* observer = nullptr);
 		/**
 		 * 上传文件 服务器处于被动模式
 		 */
-		//virtual void Stor(string fileName, string destFileName, IFileTransferObserver* observer = nullptr);
-		virtual void Stor(std::wstring serverFile, std::wstring dstFile, int fileSize, IFileTransferObserver* observer = nullptr);
+		 //virtual void Stor(string fileName, string destFileName, IFileTransferObserver* observer = nullptr);
+		virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, int fileSize, IFileTransferObserver* observer = nullptr);
 	private:
 		char sendBuff[SendSize];
 		char recvBuff[RecvSize];
-		void OnRecvDataChannelPortMode(string,SOCKET, char*, int);
-		void OnRecvDataChannelPasvMode(string,SOCKET, char*, int);
+		void OnRecvDataChannelPortMode(string, SOCKET, char*, int);
+		void OnRecvDataChannelPasvMode(string, SOCKET, char*, int);
 		void SendData(SOCKET);
 		string GetPortCmd(int port)
 		{
@@ -247,8 +275,8 @@ namespace FTPSocket
 
 	private:
 		//only recv msg from ftp server
-		void NewPasvConnect(std::function<void(string,SOCKET, char*, int)> recvFunc);
-		void NewPortConnect(std::function<void(string,SOCKET, char*, int)> recvFunc);
+		void NewPasvConnect(std::function<void(string, SOCKET, char*, int)> recvFunc);
+		void NewPortConnect(std::function<void(string, SOCKET, char*, int)> recvFunc);
 		void RemovePasvConnect();
 
 		TcpClient cmdClient;
@@ -261,6 +289,8 @@ namespace FTPSocket
 		std::map<int, TransFileInfo> uploadFileTask;
 
 		FSCommandList listCmd;
+		//用于保存结果，每次调用玩需要清空
+		std::vector<FileInfo> listfileResult;
 		string curCmd;
 		FTPSocket::FtpCmd curFtpCmd;
 		string downFileName;
@@ -275,7 +305,7 @@ namespace FTPSocket
 
 		ServerMode serverMode;
 
-
+		GS g;
 		//if pasvMode 就是服务器的ip和端口 否则就是
 		string dataIp;
 		int dataPort;

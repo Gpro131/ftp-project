@@ -58,3 +58,18 @@ struct WaitEvent
 private:
 	bool isWait;
 };
+
+class GS
+{
+public:
+	GS() {
+		WORD winsock_version = MAKEWORD(2, 2);
+		WSADATA wsa_data;
+		if (WSAStartup(winsock_version, &wsa_data) != 0) {
+			std::cout << "Failed to init socket dll!" << std::endl;
+		}
+	}
+	~GS() {
+		WSACleanup();
+	}
+};

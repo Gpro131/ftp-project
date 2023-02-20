@@ -179,20 +179,7 @@ int mains()
 	return 0;
 
 }
-class GS
-{
-public:
-	GS() {
-		WORD winsock_version = MAKEWORD(2, 2);
-		WSADATA wsa_data;
-		if (WSAStartup(winsock_version, &wsa_data) != 0) {
-			std::cout << "Failed to init socket dll!" << std::endl;
-		}
-	}
-	~GS() {
-		WSACleanup();
-	}
-};
+
 
 #include "TcpClient.h"
 #include "FTPClient.h"
@@ -282,7 +269,6 @@ void GetIp()
 }
 int main()
 {
-	GS g;
 	stringstream ss("1,2,3,4,5");
 	char ch[1024];
 	while (!ss.eof())
@@ -313,7 +299,10 @@ int main()
 	FTPClient f;
 	std::wstring  wServerAddr = String2WString(GetLocalIP());
 	//std::wstring  wServerAddr = L"192.168.1.57"
-	f.Login(wServerAddr, L"root", L"1234");
+	f.Login(wServerAddr.data(), L"root", L"1234");
+	f.Pasv();
+	std::vector<FileInfo> files;
+	f.ListAllFileAndFolders(files);
 	//f.Login("192.168.1.66", "root", "1234");
 	//如果是127.0.0.1的话，主动模式需要报告客户端的ip
 	//如果是本机的局域网ip，主动需要报告客户端的局域网ip，配套即可
@@ -344,29 +333,32 @@ int main()
 		{
 			cout << "上传文件" << arg0;
 			ss >> arg0 >> arg1;
-			f.Stor(String2WString(arg0),String2WString(arg1), 2048);
+			f.Stor(String2WString(arg0).data(), String2WString(arg1).data(), 2048);
 		}
 		if (cmd == "List")
 		{
 			f.Pasv();
-			std::vector<FileInfo> fi;
-			f.ListAllFileAndFolders(fi);
+			int maxFileCount =	f.ListAllFileAndFolders();
 			// cout<<"List"<<	f.List()<<endl;
-			
-			for (int i = 0; i < fi.size(); i++)
+			FileInfo fi;
+			for (int i = 0; i < maxFileCount; i++)
 			{
-				const wchar_t* filetype = fi[i].isFile ? L"file" : L"dir";
-				wcout << fi[i].author << L" " << fi[i].fileName << L" " << filetype << L" "<< fi[i].fileSize<< L" " << fi[i].authority<<endl;
+				if (f.GetFileInfo(fi, i))
+				{
+					const wchar_t* filetype = fi.isFile ? L"file" : L"dir";
+					wcout << fi.author << L" " << fi.fileName << L" " << filetype << L" " << fi.fileSize << L" " << fi.authority << endl;
+				}
 				//wprintf(L"%s %s %s %d ", fi[i].authority, fi[i].isFile ? "file" : "dir", fi[i].fileSize, fi[i].fileName);
 			}
+			f.ClearFileList();
 
 		}
 		if (cmd == "Retr")
 		{
 			cout << "下载文件：服务器文件：" << arg0 << "客户端目标文件位置：" << arg1;
 			ss >> arg0 >> arg1;
-			f.Retr(String2WString(arg0), 
-				String2WString(arg1), 2048);
+			f.Retr(String2WString(arg0).data(),
+				String2WString(arg1).data(), 2048);
 		}
 		ss.str("");
 		ss.seekg(0);
