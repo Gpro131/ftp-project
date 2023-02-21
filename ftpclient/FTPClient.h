@@ -262,6 +262,10 @@ namespace FTPSocket
 		 */
 		 //virtual void Stor(string fileName, string destFileName, IFileTransferObserver* observer = nullptr);
 		virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, IFileTransferObserver* observer = nullptr);
+
+		bool DeleteFile(const wchar_t* serverFile);
+		bool RenameFile(const wchar_t* serverFile, const wchar_t* destFile);
+
 	private:
 		char sendBuff[SendSize];
 		char recvBuff[RecvSize];

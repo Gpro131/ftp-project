@@ -67,6 +67,8 @@ public:
 	 * 上传文件 服务器处于被动模式
 	 */
 	virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, IFileTransferObserver* observer = nullptr) {}
+	bool DeleteFile(const wchar_t* serverFile) { return false; }
+	bool RenameFile(const wchar_t* serverFile, const wchar_t* destFile) { return false; }
 };
 
 IFtpClient* GetFtpClient();

@@ -385,13 +385,23 @@ int main()
 		}
 		if (cmd == "Pwd")
 		{
-			ss >> arg0;
 			std::wstring wDir = f.Pwd();
 			wcout<<wDir<<endl;
 		}
 		if (cmd == "Cwd")
 		{
+			ss >> arg0;
 			f.Cwd(String2WString(arg0).data());
+		}
+		if (cmd == "Rename")
+		{
+			ss >> arg0 >> arg1;
+			f.RenameFile(String2WString(arg0).data(), String2WString(arg1).data());
+		}
+		if (cmd == "Del")
+		{
+			ss >> arg0 ;
+			f.DeleteFile(String2WString(arg0).data());
 		}
 		if (cmd == "List")
 		{

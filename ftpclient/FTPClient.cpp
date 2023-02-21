@@ -545,6 +545,56 @@ namespace FTPSocket {
 
 	}
 
+	bool FTPClient::DeleteFile(const wchar_t* serverFile)
+	{
+		std::string sWorkDir = WString2String(serverFile);
+		curFtpCmd = FTPSocket::Cwd;
+		FSCommand cell;
+		Enque("DELE", &cell);
+
+		memset(sendBuff, 0, SendSize);
+		sprintf(sendBuff, "DELE %s\r\n", sWorkDir.data());
+		cmdClient.Send(sendBuff, strlen(sendBuff));
+		//memset(recvBuff, 0, RecvSize);
+		//cmdClient.Receive(recvBuff, RecvSize);
+		cell.WaitResult();
+		if (cell.recvMsgs.size() > 0 && cell.recvMsgs.back().code == 250)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	bool FTPClient::RenameFile(const wchar_t* srcFile, const wchar_t* destFile)
+	{
+		std::string sSrcFile = WString2String(srcFile);
+		std::string sDstFile = WString2String(destFile);
+		curFtpCmd = FTPSocket::Cwd;
+		FSCommand cell[2];
+		Enque("Cwd", cell);
+
+		memset(sendBuff, 0, SendSize);
+		sprintf(sendBuff, "RNFR %s\r\n", sSrcFile.data());
+		cmdClient.Send(sendBuff, strlen(sendBuff));
+		//memset(recvBuff, 0, RecvSize);
+		//cmdClient.Receive(recvBuff, RecvSize);
+		cell[0].WaitResult();
+		if (cell[0].recvMsgs.size() > 0 && cell[0].recvMsgs.back().code == 350)
+		{
+			Enque("Cwd", cell+1);
+			memset(sendBuff, 0, SendSize);
+			sprintf(sendBuff, "RNTO %s\r\n", sDstFile.data());
+			cmdClient.Send(sendBuff, strlen(sendBuff));
+			cell[1].WaitResult();
+			if (cell[1].recvMsgs.size() > 0 && cell[1].recvMsgs.back().code == 250)
+			{
+				return true;
+			}
+			return false;
+		}
+		return false;
+	}
+
 	void FTPClient::OnRecvDataChannelPortMode(string mode, SOCKET s, char* buff, int count)
 	{
 		if (mode != "msg") return;
