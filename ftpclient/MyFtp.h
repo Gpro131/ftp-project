@@ -33,10 +33,6 @@ public:
 
 	virtual	void Login(const wchar_t* addr, const wchar_t* usr, const wchar_t* pwd) {}
 	/**
-	 *服务器的被动模式，下载和上传文件需要被动模式 需要dataclient手动连接
-	 */
-	virtual void Pasv() {} ////
-	/**
 	 *列出文件列表 包括文件夹和文件
 	 */
 	virtual const wchar_t* List() { return L""; } //列出文件列表 包括文件夹和文件
@@ -45,10 +41,6 @@ public:
 	virtual bool GetFileInfo(FileInfo& fi,int idx) { return false; } //获取需要列举的文件列表
 	virtual void ClearFileList() {} //获取需要列举的文件列表
 
-	/**
-	 * 主动模式,这个固定为1026
-	 */
-	virtual void Port() {}
 	virtual void Exit() {}	//退出
 	/** 
 	 * 打印当前目录
@@ -74,7 +66,7 @@ public:
 	/**
 	 * 上传文件 服务器处于被动模式
 	 */
-	virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, int fileSize, IFileTransferObserver* observer = nullptr) {}
+	virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, IFileTransferObserver* observer = nullptr) {}
 };
 
 IFtpClient* GetFtpClient();

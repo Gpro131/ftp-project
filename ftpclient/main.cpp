@@ -283,26 +283,26 @@ public:
 
 	void DownloadFileProgressCallBack(int taskID, float percent, const wchar_t* fileName) override
 	{
-		wprintf(L"%s[Download],task[%d],percent:%.2f,fileName:%s", name.data(), taskID, percent, fileName);
+		wprintf(L"%s[Download],task[%d],percent:%.2f,fileName:%s\r\n", name.data(), taskID, percent, fileName);
 	}
 
 
 	void DownloadFinishCallBack(int taskID, const wchar_t* fileName) override
 	{
-		wprintf(L"%s[Download],task[%d],---------finish------fileName:%s", name.data(), taskID, fileName);
+		wprintf(L"%s[Download],task[%d],---------finish------fileName:%s\r\n", name.data(), taskID, fileName);
 		isDownloadFinished = true;
 	}
 
 
 	void UploadFileProgressCallBack(int taskID, float percent, const wchar_t* fileName) override
 	{
-		wprintf(L"%s[Upload],task[%d],percent:%.2f,fileName:%s", name.data(), taskID, percent, fileName);
+		wprintf(L"%s[Upload],task[%d],percent:%.2f,fileName:%s\r\n", name.data(), taskID, percent, fileName);
 	}
 
 
 	void UploadFinishCallBack(int taskID, const wchar_t* fileName) override
 	{
-		wprintf(L"%s[Upload],task[%d],------finish---,fileName:%s", name.data(), taskID, fileName);
+		wprintf(L"%s[Upload],task[%d],------finish---,fileName:%s\r\n", name.data(), taskID, fileName);
 		isUploadFinished = true;
 	}
 
@@ -339,12 +339,12 @@ int main()
 	//ifs.close();
 	using namespace FTPSocket;
 	FTPClient f;
-	std::wstring  wServerAddr = String2WString(GetLocalIP());
-	//std::wstring  wServerAddr = L"192.168.1.57"
+	//std::wstring  wServerAddr = String2WString(GetLocalIP());
+	std::wstring  wServerAddr = L"127.0.0.1";
 	f.Login(wServerAddr.data(), L"root", L"1234");
-	f.Pasv();
+	/*f.Pasv();
 	std::vector<FileInfo> files;
-	f.ListAllFileAndFolders(files);
+	f.ListAllFileAndFolders(files);*/
 	//f.Login("192.168.1.66", "root", "1234");
 	//如果是127.0.0.1的话，主动模式需要报告客户端的ip
 	//如果是本机的局域网ip，主动需要报告客户端的局域网ip，配套即可
@@ -373,9 +373,11 @@ int main()
 		}
 		if (cmd == "Stor")
 		{
-			cout << "上传文件" << arg0;
 			ss >> arg0 >> arg1;
-			f.Stor(String2WString(arg0).data(), String2WString(arg1).data(), 2048);
+			printf("上传文件：%s---->%s", arg0.data(), arg1.data());
+			dqObserver.push_back(MyObserver(std::to_wstring(dqObserver.size()), L"Download"));
+			//f.Pasv();
+			f.Stor(String2WString(arg0).data(), String2WString(arg1).data(), &dqObserver.front());
 		}
 		if (cmd == "Cdup")
 		{
@@ -389,13 +391,12 @@ int main()
 		}
 		if (cmd == "Cwd")
 		{
-			ss >> arg0;
 			f.Cwd(String2WString(arg0).data());
 		}
 		if (cmd == "List")
 		{
-			f.Pasv();
-			int maxFileCount =	f.ListAllFileAndFolders();
+			//f.Pasv();
+			int maxFileCount = f.ListAllFileAndFolders();
 			cout << "List" << maxFileCount << endl;
 			// cout<<"List"<<	f.List()<<endl;
 			FileInfo fi;
@@ -410,6 +411,12 @@ int main()
 			}
 			f.ClearFileList();
 
+		}
+		if (cmd == "MakeDir")
+		{
+			//f.Pasv();
+			ss >> arg0;
+			f.MakeDiectory(String2WString(arg0).data());
 		}
 		if (cmd == "Retr")
 		{

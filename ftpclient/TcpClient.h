@@ -9,7 +9,7 @@ public:
 	void Send(char* buff, int size);
 	void Receive(char* buff, int size);
 	std::string ReceiveStr();
-
+	void Shutdown();
 	void Close();
 	//第一个参数  msg 收到信息，如果是断开连接，则是disconnect
 	std::function<void(std::string,SOCKET, char*, int)> RecvHandler;

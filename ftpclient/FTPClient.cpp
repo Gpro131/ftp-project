@@ -37,7 +37,7 @@ namespace FTPSocket {
 
 	}
 
-	void FTPClient::Pasv()
+	bool FTPClient::Pasv()
 	{
 		curFtpCmd = FTPSocket::Pasv;
 		if (dataServer.GetIsRunning())
@@ -54,9 +54,11 @@ namespace FTPSocket {
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
 		cell.WaitResult();
+		if (cell.recvMsgs.back().code == 500)
+			return false;
 		serverMode = PasvMode;
 		string str(cell.GetContent());
-		if (str.size() == 0) return;
+		if (str.size() == 0) return false;
 		size_t posS = str.find_first_of("(");
 		size_t posE = str.find_first_of(")");
 		str = str.substr(posS + 1, posE - posS - 1);
@@ -82,6 +84,31 @@ namespace FTPSocket {
 		//dataClient.StartReceiveThread();
 		//dataClient.name = "dataClient";
 		cout << "target server:" << ip << "target port:" << port << endl;
+		return true;
+	}
+
+	bool FTPClient::Type(int mode)
+	{
+		//设置服务器模式
+		FSCommand cell;
+		Enque("Type", &cell);
+		memset(sendBuff, 0, SendSize);
+		//sprintf(sendBuff, "TYPE BINARY\r\n");	//这一行报错
+		if (mode == 0)
+		{
+			sprintf(sendBuff, "TYPE I\r\n");
+		}
+		else {
+			sprintf(sendBuff, "TYPE A\r\n");
+		}
+		cmdClient.Send(sendBuff, SendSize);
+		cell.WaitResult();
+		//memset(recvBuff, 0, RecvSize);
+		//cmdClient.Receive(recvBuff, RecvSize);
+		//cout << "Stor Recv:" << recvBuff << endl;
+		if (cell.recvMsgs.back().code == 200)
+			return true;
+		return	false;
 	}
 
 	const wchar_t* FTPClient::List()
@@ -128,7 +155,7 @@ namespace FTPSocket {
 		//dataServer.ClientOffline(dataServer.clientList.back());
 		if (serverMode == PasvMode)
 		{
-			RemovePasvConnect();
+			RemovePasvConnect(GetCmdId());
 		}
 		else {
 			dataServer.ClientOffline(dataServer.clientList.back());
@@ -138,6 +165,8 @@ namespace FTPSocket {
 
 	void FTPClient::ListAllFileAndFolders(std::vector<FileInfo>& files)
 	{
+		Pasv();
+		::Sleep(100);
 		curFtpCmd = FTPSocket::List;
 		FSCommand cell;
 		cell.nMaxTimes = 2;
@@ -178,7 +207,7 @@ namespace FTPSocket {
 
 		if (serverMode == PasvMode)
 		{
-			RemovePasvConnect();
+			RemovePasvConnect(GetCmdId());
 		}
 		else {
 			dataServer.ClientOffline(dataServer.clientList.back());
@@ -298,29 +327,38 @@ namespace FTPSocket {
 
 	void FTPClient::MakeDiectory(const wchar_t* wDir)
 	{
+		curFtpCmd = FTPSocket::MakeDir;
 		std::string dir = WString2String(wDir);
-
+		FSCommand cell;
+		Enque("MakeDir", &cell);
 		curFtpCmd = FTPSocket::MakeDir;
 		memset(sendBuff, 0, SendSize);
-		sprintf(sendBuff, "MKD %s\r\n", dir);
+		sprintf(sendBuff, "MKD %s\r\n", dir.data());
 		cmdClient.Send(sendBuff, strlen(sendBuff));
-		memset(recvBuff, 0, RecvSize);
+		//memset(recvBuff, 0, RecvSize);
+		cell.WaitResult();
 		//cmdClient.Receive(recvBuff, RecvSize);
 	}
 
 	void FTPClient::Retr(const wchar_t* wServerFile, const wchar_t* wDstFile, int fileSize, IFileTransferObserver* observer)
 	{
+		Pasv();
+		::Sleep(100);
 		int taskID = GetCmdId();
 		std::function<void(int, string, SOCKET, char*, int, IFileTransferObserver*)> dataReceive = [this](int taskID, string mode, SOCKET s, char* buff, int count, IFileTransferObserver* observ) {
-			if (downloadFileTask.find(taskID) != downloadFileTask.end())
+			auto findIter = downloadFileTask.find(taskID);
+			if (findIter != downloadFileTask.end())
 			{
-				TransFileInfo& tfi = downloadFileTask[taskID];
+				TransFileInfo& tfi = findIter->second;
 				if (mode == "disconnect")
 				{
-					std::wstring wstr = String2WString(tfi.fileName);
-					observ->DownloadFinishCallBack(taskID, wstr.data());
 					if (tfi.ofs.is_open())
+					{
+						std::wstring wstr = String2WString(tfi.fileName);
+						observ->DownloadFinishCallBack(taskID, wstr.data());
 						tfi.ofs.close();
+					}
+					downloadFileTask.erase(findIter);
 					return;
 				}
 				if (!tfi.ofs.is_open())
@@ -359,9 +397,9 @@ namespace FTPSocket {
 
 		string serverFile = WString2String(wServerFile);
 		curFtpCmd = FTPSocket::Retr;
-		
+
 		downFileName = WString2String(wDstFile);
-	
+
 		//FSCommand retrCmd;
 		//上传文件采用异步，所以这里就不等待了
 		//Enque("Retr", &retrCmd);
@@ -393,113 +431,116 @@ namespace FTPSocket {
 
 	}
 
-	void FTPClient::Stor(const wchar_t* wLocalFile, const wchar_t* wServerFileName, int fileSize, IFileTransferObserver* observer /*= nullptr*/)
+	void FTPClient::Stor(const wchar_t* wLocalFile, const wchar_t* wServerFileName, IFileTransferObserver* observer /*= nullptr*/)
 	{
-		int taskID = -1;
-		if (serverMode == PasvMode)
-		{
-			taskID = pasvConn.size();
-			//a connection for this call, it is a tcp client
-				//std::bind(&FTPClient::OnRecvDataChannelPasvMode, /*pasvConn.back(),*/this,
-				//std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-		}
-		else {
-			taskID = dataServer.clientList.size();
-		}
+		Pasv();
+		::Sleep(100);
+		std::wstring wlf = wLocalFile;
+		int taskID = GetCmdId();
+		curFtpCmd = FTPSocket::Stor;
 
 
-		std::function<void(string, SOCKET, char*, int)> dataReceive = [&](string mode, SOCKET s, char* buff, int count) {
-			if (mode == "disconnect")
-			{
-				observer->UploadFinishCallBack(taskID, String2WString(downloadFileTask[taskID].fileName).data());
-				ofs.close();
-				return;
-			}
-			if (!ofs.is_open())
-				cout << "ifs not open" << endl;
-			if (count > 0)
-			{
-				ofs.write(buff, count);
+		std::function<void(int, string, SOCKET, char*, int, IFileTransferObserver*)> dataReceive = [this](int taskID, string mode, SOCKET s, char* buff, int count, IFileTransferObserver* observ) {
+			//if (mode == "disconnect")
+			//{
+			////	observ->UploadFinishCallBack(taskID, String2WString(downloadFileTask[taskID].fileName).data());
+			//	ofs.close();
+			//	return;
+			//}
 
-				if (downloadFileTask.find(taskID) != downloadFileTask.end())
-				{
-					downloadFileTask[taskID].curTransFileSize += count;
-					float percent = (float)downloadFileTask[taskID].curTransFileSize / (float)downloadFileTask[taskID].fileSize;
-					if (observer != nullptr)
-					{
-						observer->UploadFileProgressCallBack(taskID, percent, String2WString(downloadFileTask[taskID].fileName).data());
-					}
-				}
-			}
-			ofs.flush();
 		};
+		//设置服务器模式
+		//Type(1);
+		while(!Pasv());
+	
 		if (serverMode == PasvMode)
 		{
-			NewPasvConnect(dataReceive);
+			NewPasvConnect(std::bind(dataReceive, taskID, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, observer));
 			//a connection for this call, it is a tcp client
 				//std::bind(&FTPClient::OnRecvDataChannelPasvMode, /*pasvConn.back(),*/this,
 				//std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 		}
 		else {
-			dataServer.RecvHandler = dataReceive;
+			dataServer.RecvHandler = std::bind(dataReceive, taskID, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, observer);
 		}
-		std::string localFile = WString2String(wLocalFile);
+		std::string localFile = WString2String(wlf);
 		std::string serverFileName = WString2String(wServerFileName);
 
+		FSCommand cell;
+		Enque("Stor", &cell);
+		//需要自己向服务器上传文件
 
-		curFtpCmd = FTPSocket::Stor;
-		//需要服务器处于被动模式
-		FSCommand cell[2];
-		Enque("Stor", cell);
 
 		//上传文件 需要服务器处于被动模式
 		memset(sendBuff, 0, SendSize);
 		sprintf(sendBuff, "STOR %s\r\n", localFile.data());
 		//sprintf(sendBuff, "GET  %s\r\n", "1.txt");
 		cmdClient.Send(sendBuff, strlen(sendBuff));
-		cell[0].WaitResult();
+		cell.WaitResult();
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
 		//cout << "Stor Recv:" << recvBuff << endl;
-		Enque("Type", cell + 1);
-		//需要自己向服务器上传文件
-		memset(sendBuff, 0, SendSize);
-		//sprintf(sendBuff, "TYPE BINARY\r\n");	//这一行报错
-		sprintf(sendBuff, "TYPE I\r\n");
-		cmdClient.Send(sendBuff, SendSize);
-		cell[1].WaitResult();
-		//memset(recvBuff, 0, RecvSize);
-		//cmdClient.Receive(recvBuff, RecvSize);
-		//cout << "Stor Recv:" << recvBuff << endl;
-		ifstream ifs;
-		ifs.open(localFile.data(), std::ios::in | std::ios::binary);
-		if (!ifs.is_open())
+
+		uploadFileTask[taskID] = TransFileInfo();
+		//uploadFileTask[taskID].fileSize = fileSize;
+		uploadFileTask[taskID].fileName = serverFileName;
+		uploadFileTask[taskID].curTransFileSize = 0;
+		uploadFileTask[taskID].ifs.open(localFile.data(), std::ios::in | std::ios::binary);
+		if (!uploadFileTask[taskID].ifs.is_open())
 		{
 			cout << "ifs not open" << endl;
 			return;
 		}
-		std::thread th([&]() {
-			if (ifs.gcount() > 0)
+
+
+		auto UploadFileThread = [this](int taskId, std::wstring localFile, IFileTransferObserver* observ) {
+			auto findIter = uploadFileTask.find(taskId);
+			if (findIter != uploadFileTask.end())
 			{
-				char buff[1024];
-				float fileSize = (float)ifs.gcount();
-				float uploadFileSize = 0.f;
-				while (!ifs.eof())
-				{
-					float readSize = ifs.gcount() < 1024 ? ifs.gcount() : 1024;
-					uploadFileSize += readSize;
-					memset(buff, 0, 1024);
-					ifs.read(buff, 1024);
-					dataServer.Send(buff, readSize);
-					observer->UploadFileProgressCallBack(taskID, uploadFileSize / fileSize, wLocalFile);
+				TransFileInfo& tfi = findIter->second;
+				if (!tfi.ifs.is_open()) {
+					return;
 				}
-				ifs.close();
-				observer->UploadFinishCallBack(taskID, wLocalFile);
+				tfi.ifs.seekg(0, std::ios::end);
+				float fileSize = tfi.fileSize = tfi.ifs.tellg();
+				if (fileSize > 0)
+				{
+					tfi.ifs.seekg(0, std::ios::beg);
+					char buff[1024];
+					tfi.curTransFileSize = 0;
+					while (!tfi.ifs.eof())
+					{
+						memset(buff, 0, 1024);
+						tfi.ifs.read(buff, 1024);
+						float readSize = tfi.ifs.gcount() < 1024 ? tfi.ifs.gcount() : 1024;
+						tfi.curTransFileSize += readSize;
+						if (serverMode == PasvMode)
+							pasvConn[taskId].Send(buff, readSize);
+						else
+							dataServer.Send(buff, readSize);
+						observ->UploadFileProgressCallBack(taskId, tfi.curTransFileSize / fileSize, localFile.data());
+					}
+					tfi.ifs.close();
+					observ->UploadFinishCallBack(taskId, localFile.data());
+					uploadFileTask.erase(findIter);
+				}
+				else {
+					tfi.ifs.close();
+				}
+				if (serverMode == PasvMode)
+				{
+					RemovePasvConnect(taskId);
+					/*Cwd(L"/");
+					Pwd();
+					Type(1);*/
+				}
+				else {
+					dataServer.ClientOffline(dataServer.clientList.back());
+				}
 			}
-			else {
-				ifs.close();
-			}
-			});
+		};
+
+		std::thread th(std::bind(UploadFileThread, taskID, wlf, observer));
 		th.detach();
 
 	}
@@ -652,11 +693,16 @@ namespace FTPSocket {
 
 	void FTPClient::NewPasvConnect(std::function<void(string, SOCKET, char*, int)> recvFunc)
 	{
+		//the task id is for datachannel
+		int taskId = NewCmdId();
 		TcpClient client;
-		pasvConn.push_back(client);
-		pasvConn.back().RecvHandler = recvFunc;
-		pasvConn.back().Init(dataIp, dataPort);
-		pasvConn.back().StartReceiveThread();
+		if (pasvConn.find(taskId) == pasvConn.end())
+		{
+			pasvConn[taskId] = client;
+			pasvConn[taskId].RecvHandler = recvFunc;
+			pasvConn[taskId].Init(dataIp, dataPort);
+			pasvConn[taskId].StartReceiveThread();
+		}
 	}
 
 	void FTPClient::NewPortConnect(std::function<void(string, SOCKET, char*, int)> recvFunc)
@@ -664,13 +710,23 @@ namespace FTPSocket {
 
 	}
 
-	void FTPClient::RemovePasvConnect()
+	void FTPClient::RemovePasvConnect(int taskID)
 	{
-		if (pasvConn.back().GetIsRunning())
-			pasvConn.back().Close();
-		pasvConn.pop_back();
+		if (pasvConn.size() > 0)
+		{
+			auto findIter = pasvConn.find(taskID);
+			if (findIter != pasvConn.end())
+			{
+				if (pasvConn[taskID].GetIsRunning())
+				{
+					pasvConn[taskID].Shutdown();
+					pasvConn[taskID].Close();
+					//这里清除不能再另外一个线程执行
+					//pasvConn.erase(findIter);
+				}
+			}
+		}
 	}
-
 	bool FTPClient::ParseRecvInfo(std::string content, std::string& recvContent)
 		//std::string FTPClient::ParseRecvInfo(std::string content)
 	{
@@ -698,6 +754,7 @@ namespace FTPSocket {
 	}
 	void FTPClient::OnCmdClientRecv(string mode, SOCKET s, char* buff, int size)
 	{
+		cout << buff << endl;
 		if (mode != "msg") return;
 		stringstream ss(buff);
 		char line[10480];

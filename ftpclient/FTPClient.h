@@ -164,7 +164,8 @@ namespace FTPSocket
 		std::string fileName{ "" };
 		int fileSize{ 0 };
 		int curTransFileSize{ 0 };
-		std::ofstream ofs;
+		std::ofstream ofs;	
+		std::ifstream ifs;
 	};
 
 	enum ServerMode
@@ -195,7 +196,11 @@ namespace FTPSocket
 		/**
 		 *服务器的被动模式，下载和上传文件需要被动模式 需要dataclient手动连接
 		 */
-		virtual void Pasv(); ////
+		virtual bool Pasv(); ////
+		/*
+		* 切换模式 mode:0 TYPE I 
+		*/
+		virtual bool Type(int mode); ////
 		/**
 		 *列出文件列表 包括文件夹和文件 被动模式
 		 */
@@ -211,8 +216,6 @@ namespace FTPSocket
 				listfileResult.shrink_to_fit();
 			}
 			ListAllFileAndFolders(listfileResult);
-
-
 			return listfileResult.size();
 		} //列出文件列表 包括文件夹和文件 返回文件数量
 		virtual bool GetFileInfo(FileInfo& fi, int idx) {
@@ -258,7 +261,7 @@ namespace FTPSocket
 		 * 上传文件 服务器处于被动模式
 		 */
 		 //virtual void Stor(string fileName, string destFileName, IFileTransferObserver* observer = nullptr);
-		virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, int fileSize, IFileTransferObserver* observer = nullptr);
+		virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, IFileTransferObserver* observer = nullptr);
 	private:
 		char sendBuff[SendSize];
 		char recvBuff[RecvSize];
@@ -285,17 +288,23 @@ namespace FTPSocket
 		//only recv msg from ftp server
 		void NewPasvConnect(std::function<void(string, SOCKET, char*, int)> recvFunc);
 		void NewPortConnect(std::function<void(string, SOCKET, char*, int)> recvFunc);
-		void RemovePasvConnect();
-		int GetCmdId() { return cmdId++; }
+		void RemovePasvConnect(int taskID);
+		int NewCmdId() {
+			int c = cmdId;
+			cmdId++;
+			return c;
+		}
+		int GetCmdId() { 
+			return cmdId; }
 
 		int cmdId{0};
 		TcpClient cmdClient;
 		//TcpClient dataClient;	//被动模式使用
 		TcpServer dataServer;	//主动模式使用
-		std::deque<TcpClient> pasvConn;
+		std::map<int,TcpClient> pasvConn;	//cmdID, tcpClient
 		//std::deque<TcpServer> portConn;
 		//key: taskId[pasvConn] value:FileInfo
-		std::map<int, TransFileInfo> downloadFileTask;	//first
+		std::map<int, TransFileInfo> downloadFileTask;	//first is taskClient
 		std::map<int, TransFileInfo> uploadFileTask;
 
 		FSCommandList listCmd;

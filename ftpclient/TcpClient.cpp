@@ -60,6 +60,14 @@ string  TcpClient::ReceiveStr()
 	return	recvStr;
 }
 
+void TcpClient::Shutdown()
+{
+	/*shutdown(clientSock, SD_SEND);
+	::Sleep(200);
+	shutdown(clientSock, SD_RECEIVE);*/
+	shutdown(clientSock,SD_BOTH);
+}
+
 void TcpClient::ReceiveThread()
 {
 	char recvBuff[20480];
@@ -70,16 +78,17 @@ void TcpClient::ReceiveThread()
 		int ret = recv(clientSock, recvBuff, 20480, 0);
 		if (ret > 0) {
 			//cout << "client["<< clientSock <<"] thread:" << recvBuff << endl;
-			RecvHandler("msg",clientSock, recvBuff, ret);
+			RecvHandler("msg", clientSock, recvBuff, ret);
 		}
 		else {
 			cout << "disconnect" << endl;
 			RecvHandler("disconnect", clientSock, recvBuff, ret);
-			Close();
+			Shutdown();
 			break;
 		}
 		::Sleep(5);
 	}
+	Close();
 }
 
 void TcpClient::Close()
