@@ -249,7 +249,11 @@ namespace FTPSocket {
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
-		if (cmdClient.GetIsRunning()) cmdClient.Close();
+		if (cmdClient.GetIsRunning())
+		{
+			cmdClient.Shutdown();
+			cmdClient.Close();
+		}
 		//if (dataClient.GetIsRunning()) dataClient.Close();
 		if (dataServer.GetIsRunning()) dataServer.Close();
 
@@ -591,6 +595,26 @@ namespace FTPSocket {
 				return true;
 			}
 			return false;
+		}
+		return false;
+	}
+
+	bool FTPClient::DeleteDirectory(const wchar_t* serverFile)
+	{
+		std::string sWorkDir = WString2String(serverFile);
+		curFtpCmd = FTPSocket::Cwd;
+		FSCommand cell;
+		Enque("DELE", &cell);
+
+		memset(sendBuff, 0, SendSize);
+		sprintf(sendBuff, "RMD %s\r\n", sWorkDir.data());
+		cmdClient.Send(sendBuff, strlen(sendBuff));
+		//memset(recvBuff, 0, RecvSize);
+		//cmdClient.Receive(recvBuff, RecvSize);
+		cell.WaitResult();
+		if (cell.recvMsgs.size() > 0 && cell.recvMsgs.back().code == 250)
+		{
+			return true;
 		}
 		return false;
 	}

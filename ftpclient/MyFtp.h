@@ -36,11 +36,15 @@ public:
 	 *列出文件列表 包括文件夹和文件
 	 */
 	virtual const wchar_t* List() { return L""; } //列出文件列表 包括文件夹和文件
-	virtual void ListAllFileAndFolders(std::vector<FileInfo>& files) {  } //列出文件列表 包括文件夹和文件
-	virtual int ListAllFileAndFolders() { return 0; } //列出文件列表 包括文件夹和文件 返回文件数量
-	virtual bool GetFileInfo(FileInfo& fi,int idx) { return false; } //获取需要列举的文件列表
+	//列出文件列表 包括文件夹和文件，这个不要用，传不到ue中
+	virtual void ListAllFileAndFolders(std::vector<FileInfo>& files) {  } 
+	//列出文件列表 包括文件夹和文件
+	virtual int ListAllFileAndFolders() { return 0; }
+	//列出文件列表 包括文件夹和文件 返回文件数量
+	virtual bool GetFileInfo(FileInfo& fi,int idx) { return false; }
+	//获取需要列举的文件列表
 	virtual void ClearFileList() {} //获取需要列举的文件列表
-
+	//
 	virtual void Exit() {}	//退出
 	/** 
 	 * 打印当前目录
@@ -59,16 +63,25 @@ public:
 	 */
 	virtual void MakeDiectory(const wchar_t* workDir) {}
 	/**
-	 * 下载文件,服务器处于被动模式
+	 * 下载文件，fileSize通过GetFileInfo获取才能获取到正确的进度
 	 */
-	 //virtual void Retr(wchar_t* serverFile, wchar_t* dstFile) {}
 	virtual void Retr(const wchar_t* serverFile, const wchar_t* dstFile, int fileSize, IFileTransferObserver* observer = nullptr) {}
 	/**
-	 * 上传文件 服务器处于被动模式
+	 * 上传文件
 	 */
 	virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, IFileTransferObserver* observer = nullptr) {}
-	bool DeleteFile(const wchar_t* serverFile) { return false; }
-	bool RenameFile(const wchar_t* serverFile, const wchar_t* destFile) { return false; }
+	/**
+	 * 删除文件
+	 */
+	virtual bool DeleteFile(const wchar_t* serverFile) { return false; }
+	/**
+	 * 删除文件夹
+	 */
+	virtual bool DeleteDirectory(const wchar_t* serverFile) { return false; }
+	/**
+	 * 重命名文件夹
+	 */
+	virtual bool RenameFile(const wchar_t* serverFile, const wchar_t* destFile) { return false; }
 };
 
 IFtpClient* GetFtpClient();

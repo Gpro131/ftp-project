@@ -339,6 +339,7 @@ int main()
 	//ifs.close();
 	using namespace FTPSocket;
 	FTPClient f;
+	IFtpClient* ftpClient = &f;
 	//std::wstring  wServerAddr = String2WString(GetLocalIP());
 	std::wstring  wServerAddr = L"127.0.0.1";
 	f.Login(wServerAddr.data(), L"root", L"1234");
@@ -358,7 +359,7 @@ int main()
 	ss.str("");
 	string cmd, arg0, arg1, arg2;
 
-	while (line != "exit")
+	while (true)
 	{
 		getline(cin, line);
 		ss.str(line);
@@ -377,11 +378,11 @@ int main()
 			printf("上传文件：%s---->%s", arg0.data(), arg1.data());
 			dqObserver.push_back(MyObserver(std::to_wstring(dqObserver.size()), L"Download"));
 			//f.Pasv();
-			f.Stor(String2WString(arg0).data(), String2WString(arg1).data(), &dqObserver.front());
+			ftpClient->Stor(String2WString(arg0).data(), String2WString(arg1).data(), &dqObserver.front());
 		}
 		if (cmd == "Cdup")
 		{
-			f.Cdup();
+			ftpClient->Cdup();
 		}
 		if (cmd == "Pwd")
 		{
@@ -391,17 +392,17 @@ int main()
 		if (cmd == "Cwd")
 		{
 			ss >> arg0;
-			f.Cwd(String2WString(arg0).data());
+			ftpClient->Cwd(String2WString(arg0).data());
 		}
 		if (cmd == "Rename")
 		{
 			ss >> arg0 >> arg1;
-			f.RenameFile(String2WString(arg0).data(), String2WString(arg1).data());
+			ftpClient->RenameFile(String2WString(arg0).data(), String2WString(arg1).data());
 		}
 		if (cmd == "Del")
 		{
 			ss >> arg0 ;
-			f.DeleteFile(String2WString(arg0).data());
+			ftpClient->DeleteFile(String2WString(arg0).data());
 		}
 		if (cmd == "List")
 		{
@@ -412,30 +413,40 @@ int main()
 			FileInfo fi;
 			for (int i = 0; i < maxFileCount; i++)
 			{
-				if (f.GetFileInfo(fi, i))
+				if (ftpClient->GetFileInfo(fi, i))
 				{
 					const wchar_t* filetype = fi.isFile ? L"file" : L"dir";
 					wcout << fi.author << L" " << fi.fileName << L" " << filetype << L" " << fi.fileSize << L" " << fi.authority << endl;
 				}
 				//wprintf(L"%s %s %s %d ", fi[i].authority, fi[i].isFile ? "file" : "dir", fi[i].fileSize, fi[i].fileName);
 			}
-			f.ClearFileList();
+			ftpClient->ClearFileList();
 
 		}
 		if (cmd == "MakeDir")
 		{
 			//f.Pasv();
 			ss >> arg0;
-			f.MakeDiectory(String2WString(arg0).data());
+			ftpClient->MakeDiectory(String2WString(arg0).data());
 		}
 		if (cmd == "Retr")
 		{
 			ss >> arg0 >> arg1;
-			cout << "下载文件：服务器文件：" << arg0 << "客户端目标文件位置：" << arg1<<endl;
-			dqObserver.push_back(MyObserver(std::to_wstring(dqObserver.size()),L"Download"));
+			cout << "下载文件：服务器文件：" << arg0 << "客户端目标文件位置：" << arg1 << endl;
+			dqObserver.push_back(MyObserver(std::to_wstring(dqObserver.size()), L"Download"));
 			f.Pasv();
-			f.Retr(String2WString(arg0).data(),
-				String2WString(arg1).data(), 2048,&dqObserver.front());
+			ftpClient->Retr(String2WString(arg0).data(),
+				String2WString(arg1).data(), 2048, &dqObserver.front());
+		}
+		if (cmd == "DelDir")
+		{
+			ss >> arg0;
+			std::wstring wDir = String2WString(arg0);
+			ftpClient->DeleteDirectory(wDir.data());
+		}
+		if (cmd == "Exit")
+		{
+			f.Exit();
 		}
 		ss.str("");
 		ss.seekg(0);

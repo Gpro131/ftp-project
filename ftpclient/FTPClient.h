@@ -265,7 +265,7 @@ namespace FTPSocket
 
 		bool DeleteFile(const wchar_t* serverFile);
 		bool RenameFile(const wchar_t* serverFile, const wchar_t* destFile);
-
+		bool DeleteDirectory(const wchar_t* serverFile);
 	private:
 		char sendBuff[SendSize];
 		char recvBuff[RecvSize];
