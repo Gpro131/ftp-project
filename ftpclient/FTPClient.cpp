@@ -81,6 +81,7 @@ namespace FTPSocket {
 		//dataClient.Init(ip, port);
 		//dataClient.StartReceiveThread();
 		//dataClient.name = "dataClient";
+		cout << "target server:" << ip << "target port:" << port << endl;
 	}
 
 	const wchar_t* FTPClient::List()
@@ -173,7 +174,6 @@ namespace FTPSocket {
 			GetFileListFromContent(resStr, files);
 		}
 
-
 		listCmd.Reset();
 
 		if (serverMode == PasvMode)
@@ -235,30 +235,66 @@ namespace FTPSocket {
 	const wchar_t* FTPClient::Pwd()
 	{
 		curFtpCmd = FTPSocket::Pwd;
+		FSCommand cell;
+		Enque("Pwd", &cell);
+
 		memset(sendBuff, 0, SendSize);
 		sprintf(sendBuff, "PWD\r\n");
 		cmdClient.Send(sendBuff, strlen(sendBuff));
+		cell.WaitResult();
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
 		//std::string recvStr = cmdClient.Receive();
 		//257 "/" is current directory.
-		std::string resultDir = recvBuff;
+		std::string resultDir = cell.contents.back();
 		int nPos = resultDir.find('"');
 		int nLastPos = resultDir.rfind('"');
 		std::string dir = SubString(resultDir, '"', '"');
-		return String2WString(dir).data();
+		static std::wstring tempResultForPwd;
+		tempResultForPwd = String2WString(dir);
+
+		return tempResultForPwd.data();
 	}
-	void FTPClient::Cwd(const wchar_t* workDir)
+	bool FTPClient::Cwd(const wchar_t* workDir)
 	{
 		std::string sWorkDir = WString2String(workDir);
 		curFtpCmd = FTPSocket::Cwd;
+		FSCommand cell;
+		Enque("Cwd", &cell);
+
 		memset(sendBuff, 0, SendSize);
 		sprintf(sendBuff, "CWD %s\r\n", sWorkDir.data());
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
+		cell.WaitResult();
+		if (cell.recvMsgs.size() > 0 && cell.recvMsgs.back().code == 250)
+		{
+			return true;
+		}
+
+		return true;
+
 	}
 
+
+	bool FTPClient::Cdup()
+	{
+		curFtpCmd = FTPSocket::Cdup;
+		FSCommand cell;
+		Enque("Cdup", &cell);
+		memset(sendBuff, 0, SendSize);
+		sprintf(sendBuff, "CDUP\r\n");
+		cmdClient.Send(sendBuff, strlen(sendBuff));
+		cell.WaitResult();
+		if (cell.recvMsgs.back().code == 501)
+		{
+			return false;
+		}
+
+		return true;
+
+	}
 
 	void FTPClient::MakeDiectory(const wchar_t* wDir)
 	{
@@ -274,75 +310,72 @@ namespace FTPSocket {
 
 	void FTPClient::Retr(const wchar_t* wServerFile, const wchar_t* wDstFile, int fileSize, IFileTransferObserver* observer)
 	{
-		int taskID = -1;
-		if (serverMode == PasvMode)
-		{
-			taskID = pasvConn.size();
-			//a connection for this call, it is a tcp client
-				//std::bind(&FTPClient::OnRecvDataChannelPasvMode, /*pasvConn.back(),*/this,
-				//std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-		}
-		else {
-			taskID = dataServer.clientList.size();
-		}
-
-
-		std::function<void(string, SOCKET, char*, int)> dataReceive = [&](string mode, SOCKET s, char* buff, int count) {
-			if (mode == "disconnect")
+		int taskID = GetCmdId();
+		std::function<void(int, string, SOCKET, char*, int, IFileTransferObserver*)> dataReceive = [this](int taskID, string mode, SOCKET s, char* buff, int count, IFileTransferObserver* observ) {
+			if (downloadFileTask.find(taskID) != downloadFileTask.end())
 			{
-				observer->DownloadFinishCallBack(taskID, String2WString(downloadFileTask[taskID].fileName).data());
-				ofs.close();
-				return;
-			}
-			if (!ofs.is_open())
-				cout << "ifs not open" << endl;
-			if (count > 0)
-			{
-				ofs.write(buff, count);
-
-				if (downloadFileTask.find(taskID) != downloadFileTask.end())
+				TransFileInfo& tfi = downloadFileTask[taskID];
+				if (mode == "disconnect")
 				{
-					downloadFileTask[taskID].curTransFileSize += count;
-					float percent = (float)downloadFileTask[taskID].curTransFileSize / (float)downloadFileTask[taskID].fileSize;
-					if (observer != nullptr)
+					std::wstring wstr = String2WString(tfi.fileName);
+					observ->DownloadFinishCallBack(taskID, wstr.data());
+					if (tfi.ofs.is_open())
+						tfi.ofs.close();
+					return;
+				}
+				if (!tfi.ofs.is_open())
+					cout << "ofs not open" << endl;
+				if (count > 0)
+				{
+					tfi.ofs.write(buff, count);
+
+					if (downloadFileTask.find(taskID) != downloadFileTask.end())
 					{
-						observer->DownloadFileProgressCallBack(taskID, percent, String2WString(downloadFileTask[taskID].fileName).data());
+						tfi.curTransFileSize += count;
+						float percent = (float)tfi.curTransFileSize / (float)tfi.fileSize;
+						if (observ != nullptr)
+						{
+							std::wstring wstrfileName = String2WString(tfi.fileName);
+							observ->DownloadFileProgressCallBack(s, percent, wstrfileName.data());
+						}
+						else {
+							cout << "obsever is null" << endl;
+						}
 					}
 				}
+				tfi.ofs.flush();
 			}
-			ofs.flush();
 		};
 		if (serverMode == PasvMode)
 		{
-			NewPasvConnect(dataReceive);
+			NewPasvConnect(bind(dataReceive, taskID, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, observer));
 			//a connection for this call, it is a tcp client
 				//std::bind(&FTPClient::OnRecvDataChannelPasvMode, /*pasvConn.back(),*/this,
 				//std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 		}
 		else {
-			dataServer.RecvHandler = dataReceive;
+			dataServer.RecvHandler = bind(dataReceive, taskID, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, observer);
 		}
-
-
 
 		string serverFile = WString2String(wServerFile);
 		curFtpCmd = FTPSocket::Retr;
-		curCmd = "RETR";
+		
 		downFileName = WString2String(wDstFile);
-		ofs.open(downFileName.data(), std::ios::out | std::ios::binary);
-		memset(sendBuff, 0, SendSize);
-		sprintf(sendBuff, "RETR %s\r\n", serverFile.data());
-
+	
 		//FSCommand retrCmd;
 		//上传文件采用异步，所以这里就不等待了
 		//Enque("Retr", &retrCmd);
 
-		cmdClient.Send(sendBuff, strlen(sendBuff));
 		downloadFileTask[taskID] = TransFileInfo();
+		downloadFileTask[taskID].ofs.open(downFileName.data(), std::ios::out | std::ios::binary);
 		downloadFileTask[taskID].fileSize = fileSize;
 		downloadFileTask[taskID].fileName = downFileName;
 		//retrCmd.WaitResult();
 
+		curCmd = "RETR";
+		memset(sendBuff, 0, SendSize);
+		sprintf(sendBuff, "RETR %s\r\n", serverFile.data());
+		cmdClient.Send(sendBuff, strlen(sendBuff));
 		//memset(recvBuff, 0, RecvSize);
 		////cmdClient.Receive(recvBuff, RecvSize);
 
@@ -595,7 +628,6 @@ namespace FTPSocket {
 	void FTPClient::GetFileListFromContent(const string& content, vector<FileInfo>& vctFileList)
 	{
 		vector<FileInfo> vFileList;
-		cout << content << endl;
 		vector<map<int, string>> fileList;
 		stringstream  ss(content);
 

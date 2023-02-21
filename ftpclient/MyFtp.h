@@ -50,18 +50,18 @@ public:
 	 */
 	virtual void Port() {}
 	virtual void Exit() {}	//退出
-	/**
+	/** 
 	 * 打印当前目录
 	 */
 	virtual	const wchar_t* Pwd() { return L""; }
 	/**
 	 * 改变服务器的工作目录
 	 */
-	virtual void Cwd(const wchar_t* workDir) {}
+	virtual bool Cwd(const wchar_t* workDir) { return false; }
 	/**
 	 * 进入上一层工作目录
 	 */
-	virtual void Cdup() {}
+	virtual bool Cdup() { return false; }
 	/**
 	 * 创建目录
 	 */

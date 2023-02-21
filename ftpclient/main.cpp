@@ -267,6 +267,48 @@ void GetIp()
 	int ip[4];
 	GetIpData(ip, 4);
 }
+class MyObserver : public IFileTransferObserver
+{
+public:
+	std::wstring name;
+	std::wstring type;
+	bool isUploadFinished;
+	bool isDownloadFinished;
+	MyObserver(std::wstring str,std::wstring wtype)
+	{
+		name = str;
+		type = wtype;
+		isUploadFinished = isDownloadFinished = false;
+	}
+
+	void DownloadFileProgressCallBack(int taskID, float percent, const wchar_t* fileName) override
+	{
+		wprintf(L"%s[Download],task[%d],percent:%.2f,fileName:%s", name.data(), taskID, percent, fileName);
+	}
+
+
+	void DownloadFinishCallBack(int taskID, const wchar_t* fileName) override
+	{
+		wprintf(L"%s[Download],task[%d],---------finish------fileName:%s", name.data(), taskID, fileName);
+		isDownloadFinished = true;
+	}
+
+
+	void UploadFileProgressCallBack(int taskID, float percent, const wchar_t* fileName) override
+	{
+		wprintf(L"%s[Upload],task[%d],percent:%.2f,fileName:%s", name.data(), taskID, percent, fileName);
+	}
+
+
+	void UploadFinishCallBack(int taskID, const wchar_t* fileName) override
+	{
+		wprintf(L"%s[Upload],task[%d],------finish---,fileName:%s", name.data(), taskID, fileName);
+		isUploadFinished = true;
+	}
+
+};
+std::deque< MyObserver> dqObserver;
+
 int main()
 {
 	stringstream ss("1,2,3,4,5");
@@ -335,10 +377,26 @@ int main()
 			ss >> arg0 >> arg1;
 			f.Stor(String2WString(arg0).data(), String2WString(arg1).data(), 2048);
 		}
+		if (cmd == "Cdup")
+		{
+			f.Cdup();
+		}
+		if (cmd == "Pwd")
+		{
+			ss >> arg0;
+			std::wstring wDir = f.Pwd();
+			wcout<<wDir<<endl;
+		}
+		if (cmd == "Cwd")
+		{
+			ss >> arg0;
+			f.Cwd(String2WString(arg0).data());
+		}
 		if (cmd == "List")
 		{
 			f.Pasv();
 			int maxFileCount =	f.ListAllFileAndFolders();
+			cout << "List" << maxFileCount << endl;
 			// cout<<"List"<<	f.List()<<endl;
 			FileInfo fi;
 			for (int i = 0; i < maxFileCount; i++)
@@ -355,10 +413,12 @@ int main()
 		}
 		if (cmd == "Retr")
 		{
-			cout << "下载文件：服务器文件：" << arg0 << "客户端目标文件位置：" << arg1;
 			ss >> arg0 >> arg1;
+			cout << "下载文件：服务器文件：" << arg0 << "客户端目标文件位置：" << arg1<<endl;
+			dqObserver.push_back(MyObserver(std::to_wstring(dqObserver.size()),L"Download"));
+			f.Pasv();
 			f.Retr(String2WString(arg0).data(),
-				String2WString(arg1).data(), 2048);
+				String2WString(arg1).data(), 2048,&dqObserver.front());
 		}
 		ss.str("");
 		ss.seekg(0);

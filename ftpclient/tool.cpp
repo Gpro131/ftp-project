@@ -4,8 +4,8 @@
 using namespace std;
 std::string SubString(std::string str, char start, char end)
 {
-	size_t posS = str.find_first_of("(");
-	size_t posE = str.find_last_of(")");
+	size_t posS = str.find_first_of(start);
+	size_t posE = str.find_last_of(end);
 	return  str.substr(posS + 1, posE - posS - 1);
 }
 

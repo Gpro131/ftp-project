@@ -12,6 +12,7 @@ namespace FTPSocket
 		Stor,
 		Retr,
 		Cwd,
+		Cdup,
 		Pwd,
 		MakeDir,
 		Exit

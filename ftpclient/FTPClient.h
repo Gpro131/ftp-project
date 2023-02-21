@@ -102,6 +102,10 @@ namespace FTPSocket
 		void Reset() {
 			recvTimes = 0;
 			getResult = false;
+			contents.clear();
+			contents.shrink_to_fit();
+			recvMsgs.clear();
+			recvMsgs.shrink_to_fit();
 		}
 		virtual std::string GetContent()
 		{
@@ -160,6 +164,7 @@ namespace FTPSocket
 		std::string fileName{ "" };
 		int fileSize{ 0 };
 		int curTransFileSize{ 0 };
+		std::ofstream ofs;
 	};
 
 	enum ServerMode
@@ -237,7 +242,10 @@ namespace FTPSocket
 		/**
 		 * 改变服务器的工作目录
 		 */
-		virtual void Cwd(const wchar_t* workDir);
+		virtual bool Cwd(const wchar_t* workDir);
+
+
+		virtual bool Cdup();
 		/**
 		 * 创建目录
 		 */
@@ -278,7 +286,9 @@ namespace FTPSocket
 		void NewPasvConnect(std::function<void(string, SOCKET, char*, int)> recvFunc);
 		void NewPortConnect(std::function<void(string, SOCKET, char*, int)> recvFunc);
 		void RemovePasvConnect();
+		int GetCmdId() { return cmdId++; }
 
+		int cmdId{0};
 		TcpClient cmdClient;
 		//TcpClient dataClient;	//被动模式使用
 		TcpServer dataServer;	//主动模式使用

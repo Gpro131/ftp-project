@@ -73,7 +73,7 @@ void TcpClient::ReceiveThread()
 			RecvHandler("msg",clientSock, recvBuff, ret);
 		}
 		else {
-			//cout << "disconnect" << endl;
+			cout << "disconnect" << endl;
 			RecvHandler("disconnect", clientSock, recvBuff, ret);
 			Close();
 			break;
