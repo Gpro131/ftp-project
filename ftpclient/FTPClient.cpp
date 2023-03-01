@@ -344,7 +344,7 @@ namespace FTPSocket {
 		//cmdClient.Receive(recvBuff, RecvSize);
 	}
 
-	void FTPClient::Retr(const wchar_t* wServerFile, const wchar_t* wDstFile, int fileSize, IFileTransferObserver* observer)
+	void FTPClient::Retr(const wchar_t* wLocalFile, const wchar_t* wDstFile, int fileSize, IFileTransferObserver* observer)
 	{
 		Pasv();
 		::Sleep(100);
@@ -399,24 +399,24 @@ namespace FTPSocket {
 			dataServer.RecvHandler = bind(dataReceive, taskID, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, observer);
 		}
 
-		string serverFile = WString2String(wServerFile);
+		string serverFile = WString2String(wLocalFile);
 		curFtpCmd = FTPSocket::Retr;
 
-		downFileName = WString2String(wDstFile);
+		storFileName = WString2String(wDstFile);
 
 		//FSCommand retrCmd;
 		//上传文件采用异步，所以这里就不等待了
 		//Enque("Retr", &retrCmd);
 
 		downloadFileTask[taskID] = TransFileInfo();
-		downloadFileTask[taskID].ofs.open(downFileName.data(), std::ios::out | std::ios::binary);
+		downloadFileTask[taskID].ofs.open(storFileName.data(), std::ios::out | std::ios::binary);
 		downloadFileTask[taskID].fileSize = fileSize;
-		downloadFileTask[taskID].fileName = downFileName;
+		downloadFileTask[taskID].fileName = storFileName;
 		//retrCmd.WaitResult();
 
 		curCmd = "RETR";
 		memset(sendBuff, 0, SendSize);
-		sprintf(sendBuff, "RETR %s\r\n", serverFile.data());
+		sprintf(sendBuff, "RETR %s\r\n", storFileName.data());
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		//memset(recvBuff, 0, RecvSize);
 		////cmdClient.Receive(recvBuff, RecvSize);
@@ -434,12 +434,12 @@ namespace FTPSocket {
 		//cout << "RETR Recv:" << recvBuff << endl;
 
 	}
-
-	void FTPClient::Stor(const wchar_t* wLocalFile, const wchar_t* wServerFileName, IFileTransferObserver* observer /*= nullptr*/)
+	void FTPClient::Stor(const wchar_t* localFile, const wchar_t* dstFileInServer, IFileTransferObserver* observer)
+		//void FTPClient::Stor(const wchar_t* wLocalFile, const wchar_t* wServerFileName, IFileTransferObserver* observer /*= nullptr*/)
 	{
 		Pasv();
 		::Sleep(100);
-		std::wstring wlf = wLocalFile;
+		std::wstring wlf = localFile;
 		int taskID = GetCmdId();
 		curFtpCmd = FTPSocket::Stor;
 
@@ -455,8 +455,8 @@ namespace FTPSocket {
 		};
 		//设置服务器模式
 		//Type(1);
-		while(!Pasv());
-	
+		while (!Pasv());
+
 		if (serverMode == PasvMode)
 		{
 			NewPasvConnect(std::bind(dataReceive, taskID, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, observer));
@@ -467,8 +467,8 @@ namespace FTPSocket {
 		else {
 			dataServer.RecvHandler = std::bind(dataReceive, taskID, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, observer);
 		}
-		std::string localFile = WString2String(wlf);
-		std::string serverFileName = WString2String(wServerFileName);
+		std::string sLocalFile = WString2String(wlf);
+		std::string serverFileName = WString2String(dstFileInServer);
 
 		FSCommand cell;
 		Enque("Stor", &cell);
@@ -477,7 +477,7 @@ namespace FTPSocket {
 
 		//上传文件 需要服务器处于被动模式
 		memset(sendBuff, 0, SendSize);
-		sprintf(sendBuff, "STOR %s\r\n", localFile.data());
+		sprintf(sendBuff, "STOR %s\r\n", serverFileName.data());
 		//sprintf(sendBuff, "GET  %s\r\n", "1.txt");
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		cell.WaitResult();
@@ -489,7 +489,7 @@ namespace FTPSocket {
 		//uploadFileTask[taskID].fileSize = fileSize;
 		uploadFileTask[taskID].fileName = serverFileName;
 		uploadFileTask[taskID].curTransFileSize = 0;
-		uploadFileTask[taskID].ifs.open(localFile.data(), std::ios::in | std::ios::binary);
+		uploadFileTask[taskID].ifs.open(sLocalFile.data(), std::ios::in | std::ios::binary);
 		if (!uploadFileTask[taskID].ifs.is_open())
 		{
 			cout << "ifs not open" << endl;
@@ -585,7 +585,7 @@ namespace FTPSocket {
 		cell[0].WaitResult();
 		if (cell[0].recvMsgs.size() > 0 && cell[0].recvMsgs.back().code == 350)
 		{
-			Enque("Cwd", cell+1);
+			Enque("Cwd", cell + 1);
 			memset(sendBuff, 0, SendSize);
 			sprintf(sendBuff, "RNTO %s\r\n", sDstFile.data());
 			cmdClient.Send(sendBuff, strlen(sendBuff));

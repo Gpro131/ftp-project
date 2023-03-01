@@ -69,7 +69,7 @@ public:
 	/**
 	 * 上传文件
 	 */
-	virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, IFileTransferObserver* observer = nullptr) {}
+	virtual void Stor(const wchar_t* localFile, const wchar_t* dstFileInServer, IFileTransferObserver* observer = nullptr) {}
 	/**
 	 * 删除文件
 	 */

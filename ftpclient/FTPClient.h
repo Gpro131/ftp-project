@@ -261,7 +261,7 @@ namespace FTPSocket
 		 * 上传文件 服务器处于被动模式
 		 */
 		 //virtual void Stor(string fileName, string destFileName, IFileTransferObserver* observer = nullptr);
-		virtual void Stor(const wchar_t* serverFile, const wchar_t* dstFile, IFileTransferObserver* observer = nullptr);
+		virtual void Stor(const wchar_t* localFile, const wchar_t* dstFileInServer, IFileTransferObserver* observer = nullptr);
 
 		bool DeleteFile(const wchar_t* serverFile);
 		bool RenameFile(const wchar_t* serverFile, const wchar_t* destFile);
@@ -316,7 +316,7 @@ namespace FTPSocket
 		std::vector<FileInfo> listfileResult;
 		string curCmd;
 		FTPSocket::FtpCmd curFtpCmd;
-		string downFileName;
+		string storFileName;
 		ofstream ofs;
 		void Enque(std::string type, FSCommand* cell);
 		//return true if contains msgcode 
