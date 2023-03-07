@@ -2,7 +2,7 @@
 #include "FTPClient.h"
 #include "tool.h"
 namespace FTPSocket {
-	void FTPClient::Login(const wchar_t* wAddr, const wchar_t* wUsr, const wchar_t* wPwd)
+	bool FTPClient::Login(const wchar_t* wAddr, const wchar_t* wUsr, const wchar_t* wPwd)
 	{
 		std::string addr = WString2String(wAddr);
 		std::string usr = WString2String(wUsr);
@@ -34,6 +34,7 @@ namespace FTPSocket {
 		memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
 		cell[1].WaitResult();
+		return true;
 
 	}
 

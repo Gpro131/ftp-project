@@ -40,9 +40,11 @@ struct WaitEvent
 
 	bool IsWait() { return isWait; }
 
-	void WaitResult() {
-		//cv.wait_for(locker,std::chrono::duration_cast<std::chrono::seconds>(5));
-		cv.wait(locker);
+	bool WaitResult() {
+		std::cv_status cvStat =	cv.wait_for(locker,std::chrono::seconds(5));
+		//cv.wait(locker);
+		if (cvStat == cv_status::timeout)
+			return false;
 		isWait = true;
 	}
 	void WaitResultMillionSecond(int ms) {

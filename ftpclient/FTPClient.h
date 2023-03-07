@@ -192,7 +192,7 @@ namespace FTPSocket
 		/**
 		 * 登陆
 		 */
-		virtual void Login(const wchar_t* addr, const wchar_t* usr, const wchar_t* pwd);
+		virtual bool Login(const wchar_t* addr, const wchar_t* usr, const wchar_t* pwd);
 		/**
 		 *服务器的被动模式，下载和上传文件需要被动模式 需要dataclient手动连接
 		 */

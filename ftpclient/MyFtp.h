@@ -31,7 +31,7 @@ class IFtpClient
 {
 public:
 
-	virtual	void Login(const wchar_t* addr, const wchar_t* usr, const wchar_t* pwd) {}
+	virtual	bool Login(const wchar_t* addr, const wchar_t* usr, const wchar_t* pwd) {}
 	/**
 	 *列出文件列表 包括文件夹和文件
 	 */
@@ -85,10 +85,3 @@ public:
 };
 
 IFtpClient* GetFtpClient();
-
-
-void GiveStr(std::wstring wstr);
-
-void GiveSS(const wchar_t* data);
-void UpdateRef(int& data);
-void UpdatePointer(int* data);
