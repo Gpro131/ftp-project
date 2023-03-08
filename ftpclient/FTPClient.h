@@ -59,9 +59,9 @@ namespace FTPSocket
 		{
 			getResult = false;
 		}
-		void WaitResult() {
+		bool WaitResult() {
 			//cv.wait_for(locker,std::chrono::duration_cast<std::chrono::seconds>(5));
-			evt.WaitResult();
+			return evt.WaitResult();
 		}
 		void RecvResult(const std::string& content)
 		{
@@ -87,9 +87,9 @@ namespace FTPSocket
 	{
 		int recvTimes{ 0 };
 		//预计情况会有多次接受数据
-		void WaitResult() {
+		bool WaitResult() {
 			//cv.wait_for(locker,std::chrono::duration_cast<std::chrono::seconds>(5));
-			evt.WaitResult();
+			return evt.WaitResult();
 		}
 		void WaitResult(int ms) {
 			//cv.wait_for(locker,std::chrono::duration_cast<std::chrono::seconds>(5));

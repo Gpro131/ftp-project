@@ -23,8 +23,8 @@ namespace FTPSocket {
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
-		cell[0].WaitResult();
-
+		if (!cell[0].WaitResult())
+			return false;
 
 		//√‹¬Î
 		Enque("loginpass", cell + 1);
@@ -33,9 +33,10 @@ namespace FTPSocket {
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
-		cell[1].WaitResult();
-		return true;
+		if (!cell[1].WaitResult())
+			return false;
 
+		return true;
 	}
 
 	bool FTPClient::Pasv()
@@ -54,7 +55,7 @@ namespace FTPSocket {
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
-		cell.WaitResult();
+		if (!cell.WaitResult()) return false;
 		if (cell.recvMsgs.back().code == 500)
 			return false;
 		serverMode = PasvMode;
@@ -103,7 +104,7 @@ namespace FTPSocket {
 			sprintf(sendBuff, "TYPE A\r\n");
 		}
 		cmdClient.Send(sendBuff, SendSize);
-		cell.WaitResult();
+		if (!cell.WaitResult()) return false;
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
 		//cout << "Stor Recv:" << recvBuff << endl;
@@ -137,7 +138,8 @@ namespace FTPSocket {
 		memset(sendBuff, 0, SendSize);
 		sprintf(sendBuff, "LIST\r\n");
 		cmdClient.Send(sendBuff, strlen(sendBuff));
-		cell.WaitResult();
+		if (!cell.WaitResult())return false;
+
 
 		::Sleep(200);
 		std::string resStr;
@@ -191,7 +193,8 @@ namespace FTPSocket {
 		memset(sendBuff, 0, SendSize);
 		sprintf(sendBuff, "LIST\r\n");
 		cmdClient.Send(sendBuff, strlen(sendBuff));
-		cell.WaitResult();
+		if (!cell.WaitResult())return;
+
 		::Sleep(200);
 		std::string resStr;
 		for (int i = 0; i < listCmd.contents.size(); i++)
@@ -233,8 +236,7 @@ namespace FTPSocket {
 		memset(sendBuff, 0, SendSize);
 		sprintf(sendBuff, "%s", GetPortCmd(port).data());
 		cmdClient.Send(sendBuff, strlen(sendBuff));
-		cell.WaitResult();
-
+		if (!cell.WaitResult())return;
 		//dataServer.AcceptThread();
 		//dataServer.StartReceiveThread();
 
@@ -275,7 +277,7 @@ namespace FTPSocket {
 		memset(sendBuff, 0, SendSize);
 		sprintf(sendBuff, "PWD\r\n");
 		cmdClient.Send(sendBuff, strlen(sendBuff));
-		cell.WaitResult();
+		if (!cell.WaitResult())return L"";
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
 		//std::string recvStr = cmdClient.Receive();
@@ -301,7 +303,8 @@ namespace FTPSocket {
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
-		cell.WaitResult();
+		if (!cell.WaitResult())return false;
+
 		if (cell.recvMsgs.size() > 0 && cell.recvMsgs.back().code == 250)
 		{
 			return true;
@@ -320,7 +323,7 @@ namespace FTPSocket {
 		memset(sendBuff, 0, SendSize);
 		sprintf(sendBuff, "CDUP\r\n");
 		cmdClient.Send(sendBuff, strlen(sendBuff));
-		cell.WaitResult();
+		if (!cell.WaitResult())return false;
 		if (cell.recvMsgs.back().code == 501)
 		{
 			return false;
@@ -481,7 +484,7 @@ namespace FTPSocket {
 		sprintf(sendBuff, "STOR %s\r\n", serverFileName.data());
 		//sprintf(sendBuff, "GET  %s\r\n", "1.txt");
 		cmdClient.Send(sendBuff, strlen(sendBuff));
-		cell.WaitResult();
+		if (!cell.WaitResult()) return;
 		//memset(recvBuff, 0, RecvSize);
 		//cmdClient.Receive(recvBuff, RecvSize);
 		//cout << "Stor Recv:" << recvBuff << endl;

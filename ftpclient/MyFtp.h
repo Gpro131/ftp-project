@@ -31,7 +31,7 @@ class IFtpClient
 {
 public:
 
-	virtual	bool Login(const wchar_t* addr, const wchar_t* usr, const wchar_t* pwd) {}
+	virtual	bool Login(const wchar_t* addr, const wchar_t* usr, const wchar_t* pwd) { return true; }
 	/**
 	 *列出文件列表 包括文件夹和文件
 	 */
