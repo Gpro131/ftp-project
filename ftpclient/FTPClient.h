@@ -58,6 +58,7 @@ namespace FTPSocket
 		FSCommand()
 		{
 			getResult = false;
+			contents.reserve(5);
 		}
 		bool WaitResult() {
 			//cv.wait_for(locker,std::chrono::duration_cast<std::chrono::seconds>(5));
@@ -66,9 +67,11 @@ namespace FTPSocket
 		void RecvResult(const std::string& content)
 		{
 			nRecvTimes++;
-			contents.push_back(content);
+			string sContent;
+			sContent.assign(content.data(), content.size());
+			contents.push_back(move(sContent));
 			//this->content = content;
-			recvMsgs.push_back(content);
+			recvMsgs.push_back(move(sContent));
 			if (IsFinished())
 				evt.Notify();
 		}

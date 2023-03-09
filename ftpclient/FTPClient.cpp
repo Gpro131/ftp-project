@@ -138,7 +138,7 @@ namespace FTPSocket {
 		memset(sendBuff, 0, SendSize);
 		sprintf(sendBuff, "LIST\r\n");
 		cmdClient.Send(sendBuff, strlen(sendBuff));
-		if (!cell.WaitResult())return false;
+		if (!cell.WaitResult())return L"";
 
 
 		::Sleep(200);
@@ -374,7 +374,7 @@ namespace FTPSocket {
 				if (count > 0)
 				{
 					tfi.ofs.write(buff, count);
-
+					float lastPercent = 0;
 					if (downloadFileTask.find(taskID) != downloadFileTask.end())
 					{
 						tfi.curTransFileSize += count;
@@ -382,7 +382,11 @@ namespace FTPSocket {
 						if (observ != nullptr)
 						{
 							std::wstring wstrfileName = String2WString(tfi.fileName);
-							observ->DownloadFileProgressCallBack(s, percent, wstrfileName.data());
+							if (percent - lastPercent > 0.1f)
+							{
+								observ->DownloadFileProgressCallBack(s, percent, wstrfileName.data());
+								lastPercent = percent;
+							}
 						}
 						else {
 							cout << "obsever is null" << endl;
@@ -420,7 +424,7 @@ namespace FTPSocket {
 
 		curCmd = "RETR";
 		memset(sendBuff, 0, SendSize);
-		sprintf(sendBuff, "RETR %s\r\n", storFileName.data());
+		sprintf(sendBuff, "RETR %s\r\n", serverFile.data());
 		cmdClient.Send(sendBuff, strlen(sendBuff));
 		//memset(recvBuff, 0, RecvSize);
 		////cmdClient.Receive(recvBuff, RecvSize);
