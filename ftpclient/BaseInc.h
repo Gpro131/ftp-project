@@ -46,6 +46,7 @@ struct WaitEvent
 		if (cvStat == cv_status::timeout)
 			return false;
 		isWait = true;
+		return true;
 	}
 	void WaitResultMillionSecond(int ms) {
 		//cv.wait_for(locker,std::chrono::duration_cast<std::chrono::seconds>(5));
